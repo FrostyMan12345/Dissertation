@@ -9,7 +9,7 @@
       class="search-bar"
     />
     <div v-if="searchIsFocused" class="search-results">
-      <div v-for="game in filteredList().slice(0, 5)" :key="game">
+      <div v-for="game in filteredList().slice(0, 10)" :key="game">
         <button class="search-result" @click="alertButton">
           <p>{{ game }}</p>
         </button>

@@ -37,7 +37,7 @@ const router = createRouter({
       component: MainPage,
     },
     {
-      path: '/game',
+      path: '/game/:id',
       name: 'game',
       component: GamePage,
     },

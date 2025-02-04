@@ -18,7 +18,7 @@ gameCollection = db["Games"]
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 os.environ['TWITCH_ACCESS'] = refreshAccess()
 
-@app.timer_trigger(schedule="0 0 * * * *", arg_name="myTimer", run_on_startup=False, use_monitor=False)
+@app.timer_trigger(schedule="0 0 0 * * *", arg_name="myTimer", run_on_startup=False, use_monitor=False)
 def update_Database(myTimer: func.TimerRequest) -> None:
     logging.info(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
     if myTimer.past_due:
@@ -26,15 +26,15 @@ def update_Database(myTimer: func.TimerRequest) -> None:
     
     logging.info('Python timer trigger function executed.')
     try:
-        newEntries = getCompleteDatabase()
+        newEntries = updateDatabase()
         gameCollection.insert_many(newEntries)
     except Exception as e:
         return func.HttpResponse(body=json.dumps({"msg": f"Failed to update database: {e}"}),mimetype="application/json")
-    return func.HttpResponse(body=json.dumps({"msg": f"Database upodated with {newEntries.count()} items"}),mimetype="application/json")
+    return func.HttpResponse(body=json.dumps({"msg": f"Database updated with {len(newEntries)} items"}),mimetype="application/json")
 
 
 @app.route(route="credentials", methods=[func.HttpMethod.GET],auth_level=func.AuthLevel.FUNCTION)
-def get_new_credentials(req: func.HttpRequest) -> func.HttpResponse:
+def get_credentials(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Get credentials triggered')
     access = os.getenv('TWITCH_ACCESS')
     return func.HttpResponse(body=json.dumps({"ACCESS": access}),mimetype="application/json")
@@ -47,7 +47,7 @@ def get_count(req: func.HttpRequest) -> func.HttpResponse:
 def get_count_db(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(body=json.dumps({"count": gameCollection.count_documents({})}),mimetype="application/json")
 
-@app.route(route="setupdb", methods=[func.HttpMethod.POST],auth_level=func.AuthLevel.ADMIN)
+@app.route(route="setupdb", methods=[func.HttpMethod.GET],auth_level=func.AuthLevel.ADMIN)
 def get_new_db(req: func.HttpRequest) -> func.HttpResponse:
     gameCollection.delete_many({})
     try:
@@ -55,3 +55,10 @@ def get_new_db(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         return func.HttpResponse(body=json.dumps({"msg": f"Failed to setup database: {e}"}),mimetype="application/json")
     return func.HttpResponse(body=json.dumps({"msg": f"Database setup with {gameCollection.count_documents({})} items"}),mimetype="application/json")
+
+@app.route(route="getimageid", methods=[func.HttpMethod.GET],auth_level=func.AuthLevel.ADMIN)
+def get_cover_id(req: func.HttpRequest) -> func.HttpResponse:
+    # input = req.get_json()
+    coverId = req.params.get('coverId')
+    return func.HttpResponse(body=json.dumps({"id": getAssociatedImage(coverId)}))
+        

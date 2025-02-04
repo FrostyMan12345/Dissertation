@@ -9,7 +9,11 @@
       <p>{{ genres.toString() }}</p>
     </div>
     <div class="game-metrics">
-      <img src=https://images.igdb.com/igdb/image/upload/t_720p/co93cr.jpg alt="Test" class="game-image" />
+      <img
+        :src="`https://images.igdb.com/igdb/image/upload/t_720p/${imageID}.jpg`"
+        alt="Test"
+        class="game-image"
+      />
       <hr />
       <h7>Rating: {{ rating }}</h7>
       <hr />
@@ -19,24 +23,65 @@
 </template>
 
 <script setup>
-const title = '<Game Title>'
-const description =
-  "According to all known laws of aviation, there is no way a bee should be able to fly. Its wings are too small to get its fat little body off the ground. The bee, of course, flies anyway because bees don't care what humans think is impossible. Yellow, black. Yellow, black. Yellow, black. Yellow, black. Ooh, black and yellow! Let's shake it up a little."
-const genres = ['action', 'fps', 'visual novel']
-const developers = 'Small Indie Company'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import axios from 'axios'
+
+const title = ref('')
+const description = ref('')
+const genres = ref([])
+const developers = ref('')
 const rating = 3
-const coverID = 424251
+const coverID = ref(0)
+const imageID = ref(0)
+const platforms = ref([])
 const timePlayed = 150
+const route = useRoute()
+const gameId = route.params.id
+const imageUrl = ref('https://images.igdb.com/igdb/image/upload/t_720p/')
 
-// function getImage(imageID) {
-//   try {
+async function getGameData() {
+  try {
+    const response = await axios
+      .get('http://localhost:5000/gamedata', {
+        params: { id: gameId },
+      })
+      .catch((error) => {
+        console.error('Error during Axios request:', error)
+      })
+    const gameInfo = response.data
+    title.value = gameInfo.name
+    coverID.value = gameInfo.cover
+    description.value = gameInfo.summary
+    platforms.value = gameInfo.platforms
+    console.log(`coverid: ${coverID.value}`)
+    getImage(coverID.value)
+  } catch (error) {
+    console.error('Error fetching games:', error)
+  }
+}
 
-//   }
-//   return `https://images.igdb.com/igdb/image/upload/t_720p/${imageID}.jpg`
-// }
+onMounted(() => {
+  getGameData()
+})
 
-// getImage('co93cr')
-
+async function getImage(coverID) {
+  try {
+    console.log(`coverID: ${coverID}`)
+    const response = await axios
+      .get('http://localhost:5000/imagefetch', {
+        params: { coverID: coverID },
+      })
+      .catch((error) => {
+        console.error('Error during Axios request:', error)
+      })
+    console.log(`Response: ${response.data}`)
+    console.log(`Response: ${response.data.id}`)
+    imageID.value = response.data.id
+  } catch (error) {
+    console.error('Error fetching games:', error)
+  }
+}
 </script>
 
 <style scoped>
@@ -50,6 +95,8 @@ const timePlayed = 150
 .game-image {
   max-width: 300px;
   max-height: 400px;
+  min-width: 300px;
+  min-height: 400px;
 }
 
 .game-metrics {

@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import GameInfo from '@/components/GameInfo.vue'
+</script>
+
 <template>
-  <h1>{{ $route.params.id }}</h1>
+  <GameInfo />
 </template>

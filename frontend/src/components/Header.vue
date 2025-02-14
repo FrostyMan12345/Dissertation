@@ -14,10 +14,10 @@
 <script setup>
 import { ref } from 'vue'
 import router from '@/router'
-import GameSearch from './GameSearch.vue'
+import GameSearch from './GamePage/GameSearch.vue'
 
 function goToProfilePage() {
-  router.replace('/test')
+  router.replace('/login')
 }
 
 function goToHomePage() {

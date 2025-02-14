@@ -14,6 +14,17 @@ const gameSchema = new mongoose.Schema(
     keywords: [String],
     age_ratings: [String],
     involved_companies: [String],
+    played_by: [
+      {
+        user_id: { type: mongoose.Schema.Types.ObjectId, refPath: "user_Type" },
+        user_Type: { type: String, enum: ["Users", "Admin"] },
+        rating: { type: Number },
+        hours_played: { type: Number },
+        times_played: { type: Number },
+        edited: { type: Boolean },
+        review: { type: Object, required: false },
+      },
+    ],
   },
   { collection: "Games" }
 );

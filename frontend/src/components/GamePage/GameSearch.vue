@@ -12,7 +12,14 @@
     <div v-if="searchIsFocused" class="search-results">
       <div v-for="game in filteredGames" :key="game">
         <button class="search-result" @click="goToGame(game.id)">
-          <p>{{ game.name }}</p>
+          <div class="horizontal-container">
+            <p>{{ game.name }}</p>
+            <img
+              :src="`https://images.igdb.com/igdb/image/upload/t_micro/${game.imageId}.jpg`"
+              alt="Game Cover"
+              class="game-image"
+            />
+          </div>
         </button>
       </div>
     </div>
@@ -73,6 +80,10 @@ function goToGame(id) {
 </script>
 
 <style scoped>
+.horizontal-container {
+  justify-content: space-between;
+}
+
 .search-container {
   position: relative;
   display: inline-block;

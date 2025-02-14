@@ -1,48 +1,83 @@
 <script setup>
 import { ref } from 'vue'
+import axios from 'axios'
+import { userState } from '@/UserData'
 
 const login = ref(true)
-const developer = ref(false)
+const loginType = ref('user')
 
-function accountLogin(username, password) {}
+async function accountLogin(username, password) {
+  try {
+    const response = await axios.get('http://localhost:5000/login/' + loginType.value, {
+      params: {
+        username,
+        password,
+      },
+    })
+    console.log(response.data)
+    console.log(response.data.userId)
+    const id = response.data.userId
+    switch (loginType.value) {
+      case 'user':
+        userState.loginUser(id)
+        break
+      case 'admin':
+        userState.loginAdmin(id)
+        break
+      case 'developer':
+        userState.loginDeveloper(id)
+        break
+    }
+    console.log(userState)
+  } catch (error) {
+    console.error('Error logging in:', error)
+    console.log(error.response.data.message)
+  }
+}
 
-function accountRegister(username, password) {
-  // MongoClient.connect(process.env.MONGO, { useNewUrlParser: true, useUnifiedTopology: true })
-  // .then(client => {
-  //   console.log("Connected to MongoDB");
-
-  //   // Access the database and collections
-  //   const db = client.db("Third_Year_Project");
-  //   const collection = db.collection("Users");
-
-  //   // Perform database operations
-  //   collection.find({}).toArray((err, data) => {
-  //     if (err) throw err;
-  //     console.log(data);
-  //   });
-
-  //   // Close the connection after use
-  //   client.close();
-  // })
-  // .catch(err => {
-  //   console.error("Error connecting to MongoDB:", err);
-  // });
-  console.log(process.env.MONGODB_DATABASE)
+async function accountRegister(username, password) {
+  try {
+    const response = await axios.post('http://localhost:5000/register/' + loginType.value, {
+      username,
+      password,
+    })
+    console.log(response.data)
+    const id = response.data.userId
+    switch (loginType.value) {
+      case 'user':
+        userState.loginUser(id)
+        break
+      case 'admin':
+        userState.loginAdmin(id)
+        break
+      case 'developer':
+        userState.loginDeveloper(id)
+        break
+    }
+    console.log(userState)
+  } catch (error) {
+    console.error('Error registering account:', error)
+    console.log(error.response.data.message)
+  }
 }
 
 function toggleLogin() {
   login.value = !login.value
 }
 
-function toggleDeveloper() {
-  developer.value = !developer.value
+function changeLoginType(type) {
+  loginType.value = type
 }
 </script>
 
 <template>
   <div class="container">
-    <h1 v-if="login">Login</h1>
-    <h1 v-else>Register</h1>
+    <h1 v-if="login">
+      {{ String(loginType).charAt(0).toUpperCase() + String(loginType).slice(1) }} Login
+    </h1>
+    <h1 v-else>
+      {{ String(loginType).charAt(0).toUpperCase() + String(loginType).slice(1) }} Register
+    </h1>
 
     <hr />
 
@@ -55,15 +90,18 @@ function toggleDeveloper() {
       <input type="text" v-model="password" placeholder="Password" />
     </div>
 
-    <button v-if="login" @click="accountLogin(username, password)">Login</button>
-    <button v-else @click="accountRegister(username, password)">Register</button>
+    <button v-if="login" @click="accountLogin(username, password)">Sign In</button>
+    <button v-else @click="accountRegister(username, password)">Register New Account</button>
 
     <hr />
 
-    <button v-if="login" @click="toggleLogin">Register</button>
-    <button v-else @click="toggleLogin">Login</button>
-    <button v-if="!developer" @click="toggleDeveloper">Developer?</button>
-    <button v-else @click="toggleDeveloper">Not Developer?</button>
+    <button v-if="login" @click="toggleLogin">Register New Account</button>
+    <button v-else @click="toggleLogin">Sign In</button>
+    <div class="horizontal-container" style="max-width: 25vw">
+      <button @click="changeLoginType('user')">User</button>
+      <button @click="changeLoginType('admin')">Admin</button>
+      <button @click="changeLoginType('developer')">Developer</button>
+    </div>
   </div>
 </template>
 
@@ -125,6 +163,7 @@ button {
   align-items: center;
   justify-content: center;
   width: 25vw;
-  margin-top: 25px;
+  margin-top: 15px;
+  margin-bottom: 15px;
 }
 </style>

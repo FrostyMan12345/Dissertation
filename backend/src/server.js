@@ -303,18 +303,18 @@ app.get("/game/:id/reaction/get", async (req, res) => {
       id: id,
       "played_by.review.reactions.user_id": new mongoose.Types.ObjectId(userId),
     }).select("played_by.review");
-    console.log(reactionResponse);
+    // console.log(reactionResponse);
     const reviews = reactionResponse.flatMap((game) =>
       game.played_by.flatMap((p) => p.review)
     );
-    console.log(reviews);
+    // console.log(reviews);
     var reviewsReacted = {};
     if (reactionResponse) {
       reviews.forEach((review) => {
         if (review != undefined) {
           reactions = review.reactions;
-          console.log(review);
-          console.log(reactions);
+          // console.log(review);
+          // console.log(reactions);
           if (reactions) {
             reactions.forEach((reaction) => {
               if (
@@ -332,7 +332,7 @@ app.get("/game/:id/reaction/get", async (req, res) => {
         }
       });
     }
-    console.log(reviewsReacted);
+    // console.log(reviewsReacted);
     res.status(200).json({
       message: "Reaction Get Success",
       reviews: reviewsReacted,
@@ -340,6 +340,65 @@ app.get("/game/:id/reaction/get", async (req, res) => {
   } catch (error) {
     console.error("Reaction get failed: ", error);
     res.status(500).json({ message: "Failed to get reactions" });
+  }
+});
+
+app.get("/game/:id/log/check", async (req, res) => {
+  const id = req.params.id;
+  const { userId } = req.query;
+  console.log(id, userId);
+  try {
+    const loggedResponse = await Game.find({
+      id: id,
+      "played_by.user_id": new mongoose.Types.ObjectId(userId),
+    });
+    console.log(loggedResponse);
+    if (loggedResponse.length === 0) {
+      console.log("bbbbbbbbbbbbbbbbbb");
+      res.status(200).json({
+        message: "Log check Success",
+        reviews: loggedResponse,
+        logged: false,
+      });
+    } else {
+      console.log("aaaaaaaaaaaaaaaa");
+      res.status(200).json({
+        message: "Log check Success",
+        reviews: loggedResponse,
+        logged: true,
+      });
+    }
+  } catch (error) {
+    console.error("Log check failed: ", error);
+    res.status(500).json({ message: "Failed to log check" });
+  }
+});
+
+app.get("/game/:id/log/get", async (req, res) => {
+  const id = req.params.id;
+  const { userId } = req.query;
+  try {
+    const logResponse = await Game.find(
+      {
+        id: id,
+        "played_by.user_id": new mongoose.Types.ObjectId(userId),
+      },
+      {
+        played_by: {
+          $elemMatch: { user_id: new mongoose.Types.ObjectId(userId) },
+        },
+      }
+    );
+
+    console.log(logResponse[0].played_by);
+
+    res.status(200).json({
+      message: "Log Get Success",
+      logData: logResponse[0].played_by,
+    });
+  } catch (error) {
+    console.error("Log Get failed: ", error);
+    res.status(500).json({ message: "Failed to get log" });
   }
 });
 

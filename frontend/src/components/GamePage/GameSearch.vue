@@ -115,8 +115,8 @@ function goToGame(id) {
   height: inherit;
 }
 
-.search-result:last-child {
-  border-bottom: none; /* Remove the bottom border from the last result */
+.search-result:last-cdhild {
+  border-bottom: none;
 }
 
 .search-result:hover {

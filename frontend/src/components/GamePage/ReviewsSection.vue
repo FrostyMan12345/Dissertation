@@ -54,9 +54,6 @@ async function getReacted() {
     })
     Object.assign(reacted, response.data.reviews)
     console.log(reacted)
-    if (!reacted['bvdsuhovcb']) {
-      console.log('AHHHHHHHHHHHHHHHHHHHH')
-    }
   } catch (error) {
     console.error('Reaction Get Failure ', error)
   }

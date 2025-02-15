@@ -63,7 +63,6 @@ const gameId = route.params.id
 onClickOutside(target, () => emit('modal-exit'))
 
 async function logGameData() {
-  console.log(dateObj)
   try {
     var response = {}
     console.log(userState)
@@ -99,6 +98,7 @@ async function logGameData() {
     const gameInfo = response.data
     console.log(gameInfo)
     emit('modal-exit')
+    location.reload()
   } catch (error) {
     console.error(error)
   }

@@ -16,8 +16,9 @@ const gameSchema = new mongoose.Schema(
     involved_companies: [String],
     played_by: [
       {
-        user_id: { type: mongoose.Schema.Types.ObjectId, refPath: "user_Type" },
-        user_Type: { type: String, enum: ["Users", "Admin"] },
+        // user_id: { type: mongoose.Schema.Types.ObjectId, refPath: "user_type" },
+        user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        user_type: { type: String, enum: ["User", "Admin"] },
         rating: { type: Number },
         hours_played: { type: Number },
         times_played: { type: Number },

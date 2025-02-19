@@ -1,6 +1,12 @@
 <template>
   <div class="review">
-    <h4>{{ reviewInfo?.username }}</h4>
+    <div class="horizontal-container">
+      <h4>{{ reviewInfo?.username }}</h4>
+      <a :href="`http://localhost:5173/profile/${userState.userType}/${reviewInfo?.username}`">{{
+        reviewInfo?.username
+      }}</a>
+      <ProfilePicture :image="image" />
+    </div>
     <p>{{ reviewInfo?.review_content }}</p>
     <div class="horizontal-container">
       <div>
@@ -36,12 +42,14 @@ import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { userState } from '@/UserData'
+import ProfilePicture from '../ProfilePicture.vue'
 
 const props = defineProps({
   reviewInfo: Object,
   rating: Number,
   reaction: Number,
   reactedPrior: Boolean,
+  image: String,
 })
 
 const likes = ref(props.reviewInfo.likes)

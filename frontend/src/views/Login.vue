@@ -17,15 +17,17 @@ async function accountLogin(username, password) {
     console.log(response.data)
     console.log(response.data.userId)
     const id = response.data.userId
+    const imageName = response.data.image
+    console.log(username)
     switch (loginType.value) {
       case 'user':
-        userState.loginUser(id)
+        userState.loginUser(id, username, imageName)
         break
       case 'admin':
-        userState.loginAdmin(id)
+        userState.loginAdmin(id, username, imageName)
         break
       case 'developer':
-        userState.loginDeveloper(id)
+        userState.loginDeveloper(id, username, imageName)
         break
     }
     console.log(userState)
@@ -87,7 +89,7 @@ function changeLoginType(type) {
     </div>
     <div class="horizontal-container">
       <h3>Password:</h3>
-      <input type="text" v-model="password" placeholder="Password" />
+      <input type="password" v-model="password" placeholder="Password" />
     </div>
 
     <button v-if="login" @click="accountLogin(username, password)">Sign In</button>

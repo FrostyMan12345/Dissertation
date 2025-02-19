@@ -8,13 +8,27 @@ const Admin = require("./mongoose_models/AdminSchema");
 const Developer = require("./mongoose_models/DeveloperSchema");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
+const path = require("path");
 const { resolve } = require("path");
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + path.extname(file.originalname);
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({ storage });
 
 const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 5000;
 
-app.use(express.json()); // Enable JSON parsing
+app.use(express.json());
 
 const azureAPI = "http://localhost:7071/" || process.env.AZUREAPI;
 
@@ -66,11 +80,15 @@ app.get("/game/:id/data", async (req, res) => {
   const { id } = req.params;
   // console.log("Requested Game ID:", id);
   try {
-    var game = await Game.findOne({ id: id }).lean();
+    var game = await Game.findOne({ id: id })
+      .populate("played_by.user_id")
+      .lean();
+    // console.log(await User.findOne({ _id: game.played_by[0].user_id }));
+    // console.log(await Admin.findOne({ _id: game.played_by[0].user_id }));
     if (!game) {
       return res.status(404).json({ message: "Game not found" });
     }
-    // console.log("Game Data:", game);
+    console.log("Game Data:", game);
     game = parseGameData(game);
     res.json(game);
   } catch (error) {
@@ -139,9 +157,10 @@ app.post("/game/:id/log", async (req, res) => {
     userType = "Admin";
   } else {
     schema = User;
-    userType = "Users";
+    userType = "User";
   }
-  console.log(review);
+  // console.log(review);
+  // console.log(userType);
   console.log(Object.keys(review).length === 0);
   const reviewId = new mongoose.Types.ObjectId();
   try {
@@ -197,8 +216,8 @@ app.post("/game/:id/log", async (req, res) => {
         },
       };
     }
-    console.log(gamesPlayed);
-    console.log(playedBy);
+    // console.log(gamesPlayed);
+    // console.log(playedBy);
     const updateResponse = await Game.findOneAndUpdate({ id: id }, playedBy, {
       returnDocument: "after",
     });
@@ -220,7 +239,7 @@ app.post("/game/:id/reaction/update", async (req, res) => {
   const id = req.params.id;
   const { reaction, newLikes, newDislikes, userState, reactedPrior, reviewId } =
     req.body;
-  console.log(reactedPrior, reaction);
+  // console.log(reactedPrior, reaction);
   try {
     var reactionUpdate = {};
     var reactionResponse = [];
@@ -287,7 +306,7 @@ app.post("/game/:id/reaction/update", async (req, res) => {
       );
     }
 
-    console.log(reactionResponse);
+    // console.log(reactionResponse);
     res.status(200).json({ message: "Reaction Update Success" });
   } catch (error) {
     console.error("Reaction update failed: ", error);
@@ -346,13 +365,13 @@ app.get("/game/:id/reaction/get", async (req, res) => {
 app.get("/game/:id/log/check", async (req, res) => {
   const id = req.params.id;
   const { userId } = req.query;
-  console.log(id, userId);
+  // console.log(id, userId);
   try {
     const loggedResponse = await Game.find({
       id: id,
       "played_by.user_id": new mongoose.Types.ObjectId(userId),
     });
-    console.log(loggedResponse);
+    // console.log(loggedResponse);
     if (loggedResponse.length === 0) {
       console.log("bbbbbbbbbbbbbbbbbb");
       res.status(200).json({
@@ -389,8 +408,8 @@ app.get("/game/:id/log/get", async (req, res) => {
         },
       }
     );
-
-    console.log(logResponse[0].played_by);
+    // console.log(logResponse);
+    // console.log(logResponse[0].played_by);
 
     res.status(200).json({
       message: "Log Get Success",
@@ -398,9 +417,66 @@ app.get("/game/:id/log/get", async (req, res) => {
     });
   } catch (error) {
     console.error("Log Get failed: ", error);
-    res.status(500).json({ message: "Failed to get log" });
+    res.status(500).json({ message: "Failed to get log or No Log" });
   }
 });
+
+app.post(
+  "/user/:userType/:id/update-image",
+  upload.single("fileToUpload"),
+  async (req, res) => {
+    const userId = req.params.id;
+    const userType = req.params.userType;
+    const fileName = req.file.filename;
+    console.log(userId, userType, fileName);
+    var schema = User;
+    if (userType === "Admin") {
+      schema = Admin;
+    } else if (userType === "Developer") {
+      schema = Developer;
+    }
+    try {
+      const newImageCommand = {
+        $set: {
+          image: fileName,
+        },
+      };
+      // console.log(newImageCommand);
+      const updateImageResponse = await schema.findOneAndUpdate(
+        {
+          _id: new mongoose.Types.ObjectId(userId),
+        },
+        newImageCommand,
+        { returnDocument: "after" }
+      );
+    } catch (error) {
+      res.status(500).json({ message: `Update Image Failure: ${error}` });
+    }
+    res.status(200).json({ message: `Update Image Success}`, image: fileName });
+  }
+);
+
+app.get("/get/:userType/:username", async (req, res) => {
+  const username = req.params.username;
+  const userType = req.params.userType;
+  var schema = User;
+  if (userType === "Admin") {
+    schema = Admin;
+  } else if (userType === "Developer") {
+    schema = Developer;
+  }
+  try {
+    const userResponse = await schema.findOne({
+      _id: new mongoose.Types.ObjectId(userId),
+    });
+    console.log(userResponse);
+    res.status(200).json({ message: "Get User Success", user: userResponse });
+  } catch (error) {
+    res.status(500).json({ message: `Get User Failure: ${error}` });
+  }
+});
+
+app.use("/Uploads", express.static("Uploads"));
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
@@ -454,11 +530,13 @@ async function loginAccount(type, username, password, res) {
       .findOne({ username: username, password: passwordHash });
     console.log(response);
     console.log(response._id);
+    console.log(response.image);
     if (response) {
       return res.status(200).json({
         message: "Login Success",
         userId: response._id,
         username: username,
+        image: response.image,
       });
     } else {
       return res
@@ -526,13 +604,15 @@ function getGenres(genres) {
 
 function parseCompanies(companyData) {
   var devPubList = { developers: [], publishers: [] };
-  companyData.forEach((company) => {
-    if (company["developer"]) {
-      devPubList["developers"].push(company["company"]["name"]);
-    } else {
-      devPubList["publishers"].push(company["company"]["name"]);
-    }
-  });
+  try {
+    companyData.forEach((company) => {
+      if (company["developer"]) {
+        devPubList["developers"].push(company["company"]["name"]);
+      } else {
+        devPubList["publishers"].push(company["company"]["name"]);
+      }
+    });
+  } catch (error) {}
   return devPubList;
 }
 

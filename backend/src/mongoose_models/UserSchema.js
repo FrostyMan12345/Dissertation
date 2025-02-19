@@ -4,9 +4,10 @@ const userSchema = new mongoose.Schema(
   {
     username: { type: String },
     password: { type: String },
+    image: { type: String },
     games_played: [
       {
-        game_id: { type: mongoose.Schema.Types.ObjectId, ref: "Games" },
+        game_id: { type: mongoose.Schema.Types.ObjectId, ref: "Game" },
         rating: { type: Number },
         hours_played: { type: Number },
         times_played: { type: Number },

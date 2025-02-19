@@ -4,6 +4,7 @@ import Login from '../views/Login.vue'
 import Testing from '../components/Testing.vue'
 import MainPage from '../components/MainPage.vue'
 import GamePage from '../views/GamePage.vue'
+import ProfilePage from '../views/ProfilePage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,6 +41,11 @@ const router = createRouter({
       path: '/game/:id',
       name: 'game',
       component: GamePage,
+    },
+    {
+      path: '/profile/:userType/:username',
+      name: 'profile',
+      component: ProfilePage,
     },
   ],
 })

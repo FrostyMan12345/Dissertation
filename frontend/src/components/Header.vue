@@ -3,9 +3,12 @@
     <button @click="goToHomePage">
       <img src="../assets/home_icon.png" alt="Home" class="header-button" />
     </button>
-    <h3>My App Header</h3>
-    <button @click="goToProfilePage">
-      <img src="../assets/profile_icon.png" alt="Profile" class="header-button" />
+    <h3>{{ userState }}</h3>
+    <button v-if="userState.loggedIn" @click="goToProfilePage">
+      <ProfilePicture :header="true" />
+    </button>
+    <button v-else @click="goToLoginPage">
+      <ProfilePicture :header="true" />
     </button>
   </header>
   <GameSearch />
@@ -15,13 +18,15 @@
 import { ref } from 'vue'
 import router from '@/router'
 import GameSearch from './GamePage/GameSearch.vue'
+import ProfilePicture from './ProfilePicture.vue'
+import { userState } from '@/UserData'
 
 function goToProfilePage() {
-  router.replace('/login')
+  router.push(`/profile/${userState.userType}/${userState.username}`)
 }
 
-function goToHomePage() {
-  router.replace('/main')
+function goToLoginPage() {
+  router.push('/login')
 }
 </script>
 

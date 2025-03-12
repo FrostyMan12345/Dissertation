@@ -88,8 +88,8 @@ app.get("/game/:id/data", async (req, res) => {
     if (!game) {
       return res.status(404).json({ message: "Game not found" });
     }
-    console.log("Game Data:", game);
     game = parseGameData(game);
+    console.log("Game Data:", game);
     res.json(game);
   } catch (error) {
     console.error("Database query error:", error);
@@ -137,7 +137,7 @@ app.post("/register/admin", async (req, res) => {
   return await registerAccount("Admin", username, password, res);
 });
 
-app.post("/game/:id/log", async (req, res) => {
+app.post("/game/:id/record/make", async (req, res) => {
   const id = req.params.id;
   const {
     userState,
@@ -229,6 +229,77 @@ app.post("/game/:id/log", async (req, res) => {
       }
     );
     res.status(200).json({ message: "Success", response: updateResponse });
+  } catch (error) {
+    console.error("Database query error:", error);
+    res.status(500).json({ message: `Error updating game data ${error}` });
+  }
+});
+
+app.post("/game/:id/record/edit", async (req, res) => {
+  const id = req.params.id;
+  const {
+    userState,
+    rating,
+    timesPlayed,
+    hoursPlayed,
+    review = {},
+    game,
+  } = req.body;
+  var schema = "";
+  var userType = "";
+  if (userState.developer) {
+    res.status(400).json({ message: "Developer cannot log games" });
+    return;
+  } else if (userState.admin) {
+    schema = Admin;
+    userType = "Admin";
+  } else {
+    schema = User;
+    userType = "User";
+  }
+  // console.log(review);
+  // console.log(userType);
+  console.log(Object.keys(review).length === 0);
+  try {
+    var playedBy = {};
+    if (Object.keys(review).length === 0) {
+      console.log("Review Not Being added");
+      playedBy = {
+        user_id: new mongoose.Types.ObjectId(userState.userId),
+        user_type: userType,
+        rating: rating,
+        hours_played: hoursPlayed,
+        times_played: timesPlayed,
+      };
+    } else {
+      if (review.review_id === -1)
+        review.review_id = new mongoose.Types.ObjectId();
+      console.log("Review Being added");
+      playedBy = {
+        user_id: new mongoose.Types.ObjectId(userState.userId),
+        user_type: userType,
+        rating: rating,
+        hours_played: hoursPlayed,
+        times_played: timesPlayed,
+        review: review,
+      };
+    }
+
+    const logResponse = await Game.findOneAndUpdate(
+      {
+        id: id,
+        "played_by.user_id": new mongoose.Types.ObjectId(userState.userId), // Find the correct game and user
+      },
+      {
+        $set: {
+          "played_by.$": playedBy, // Replace only the matched element
+        },
+      },
+      { returnDocument: "after" }
+    );
+
+    console.log(logResponse);
+    res.status(200).json({ message: "Success", response: logResponse });
   } catch (error) {
     console.error("Database query error:", error);
     res.status(500).json({ message: `Error updating game data ${error}` });
@@ -362,7 +433,7 @@ app.get("/game/:id/reaction/get", async (req, res) => {
   }
 });
 
-app.get("/game/:id/log/check", async (req, res) => {
+app.get("/game/:id/record/check", async (req, res) => {
   const id = req.params.id;
   const { userId } = req.query;
   // console.log(id, userId);
@@ -373,14 +444,12 @@ app.get("/game/:id/log/check", async (req, res) => {
     });
     // console.log(loggedResponse);
     if (loggedResponse.length === 0) {
-      console.log("bbbbbbbbbbbbbbbbbb");
       res.status(200).json({
         message: "Log check Success",
         reviews: loggedResponse,
         logged: false,
       });
     } else {
-      console.log("aaaaaaaaaaaaaaaa");
       res.status(200).json({
         message: "Log check Success",
         reviews: loggedResponse,
@@ -393,7 +462,7 @@ app.get("/game/:id/log/check", async (req, res) => {
   }
 });
 
-app.get("/game/:id/log/get", async (req, res) => {
+app.get("/game/:id/record/get", async (req, res) => {
   const id = req.params.id;
   const { userId } = req.query;
   try {
@@ -408,7 +477,7 @@ app.get("/game/:id/log/get", async (req, res) => {
         },
       }
     );
-    // console.log(logResponse);
+    console.log(logResponse);
     // console.log(logResponse[0].played_by);
 
     res.status(200).json({
@@ -418,6 +487,45 @@ app.get("/game/:id/log/get", async (req, res) => {
   } catch (error) {
     console.error("Log Get failed: ", error);
     res.status(500).json({ message: "Failed to get log or No Log" });
+  }
+});
+
+app.post("/game/:id/update", async (req, res) => {
+  const id = req.params.id;
+  try {
+    const dataResponse = await Game.find({ id: id }).select("played_by").lean();
+    gameRecords = dataResponse[0].played_by;
+    const ratings = [];
+    const timesPlayed = [];
+    const hoursPlayed = [];
+    const recordsCreated = gameRecords.length;
+    gameRecords.forEach((record) => {
+      ratings.push(record.rating);
+      timesPlayed.push(record.times_played);
+      hoursPlayed.push(record.hours_played);
+    });
+    console.log(ratings, timesPlayed, hoursPlayed);
+    const averageRating = getAverage(ratings, 0.25, 0.75);
+    const averageTimesPlayed = getAverage(timesPlayed, 0.2, 0.75);
+    const averageHoursPlayed = getAverage(hoursPlayed, 0.2, 0.75);
+    console.log(averageRating, averageTimesPlayed, averageHoursPlayed);
+    const updateResponse = await Game.findOneAndUpdate(
+      { id: id },
+      {
+        $set: {
+          average_rating: averageRating,
+          average_times_played: averageTimesPlayed,
+          average_hours_played: averageHoursPlayed,
+          records_made: recordsCreated,
+        },
+      },
+      { returnDocument: "after" }
+    );
+    console.log(updateResponse);
+    res.status(200).json({ message: "Updating Data Success" });
+  } catch (error) {
+    console.log(`Error updating game: ${error}`);
+    res.status(500).json({ message: "Updating Data Failed" });
   }
 });
 
@@ -459,6 +567,7 @@ app.post(
 app.get("/get/:userType/:username", async (req, res) => {
   const username = req.params.username;
   const userType = req.params.userType;
+  console.log(`Getting user data of ${username} from the ${userType} table`);
   var schema = User;
   if (userType === "Admin") {
     schema = Admin;
@@ -467,12 +576,32 @@ app.get("/get/:userType/:username", async (req, res) => {
   }
   try {
     const userResponse = await schema.findOne({
-      _id: new mongoose.Types.ObjectId(userId),
+      username: username,
     });
     console.log(userResponse);
     res.status(200).json({ message: "Get User Success", user: userResponse });
   } catch (error) {
     res.status(500).json({ message: `Get User Failure: ${error}` });
+  }
+});
+
+app.get("/leaderboard/:sortBy", async (req, res) => {
+  const sortBy = req.params.sortBy;
+  console.log("Bazinga");
+  try {
+    const response = await Game.find({})
+      .select(
+        "name cover id average_hours_played average_rating average_times_played records_made"
+      )
+      .sort({ [sortBy]: -1 })
+      .lean();
+    console.log(response);
+    res
+      .status(200)
+      .json({ message: "Leaderboard Get Success", leaderboard: response });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Leaderboard Get Failure" });
   }
 });
 
@@ -579,7 +708,11 @@ function parseGameData(game) {
 }
 
 function parseImageId(coverId) {
-  return coverId["image_id"];
+  try {
+    return coverId["image_id"];
+  } catch (error) {
+    return "";
+  }
 }
 
 async function getCredentials() {
@@ -662,4 +795,29 @@ function parsePlatforms(platforms) {
     platformNames.push(platform["name"]);
   });
   return platformNames;
+}
+
+function getAverage(values, lowRange, highRange) {
+  console.log(values);
+  var average = 0;
+  if (values.length > 3) {
+    const Q1 = values[Math.floor(values.length * lowRange)];
+    const Q3 = values[Math.floor(values.length * highRange)];
+    const IQR = Q3 - Q1;
+    const lowBound = Q1 - 1.5 * IQR;
+    const highBound = Q3 + 1.5 * IQR;
+    const valuesToAverage = values.filter(
+      (value) => value >= lowBound || value <= highBound
+    );
+    if (valuesToAverage.length == 0) return 0;
+    console.log(valuesToAverage.reduce((total, value) => total + value, 0));
+    average =
+      valuesToAverage.reduce((total, value) => total + value, 0) /
+      valuesToAverage.length;
+  } else {
+    if (values.length == 0) return 0;
+    average = values.reduce((total, value) => total + value, 0) / values.length;
+  }
+  console.log(average.toFixed(2));
+  return parseFloat(average.toFixed(2));
 }

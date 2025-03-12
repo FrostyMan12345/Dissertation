@@ -1,9 +1,10 @@
 <template>
   <header>
-    <button @click="goToHomePage">
+    <button @click="goToLoginPage">
       <img src="../assets/home_icon.png" alt="Home" class="header-button" />
     </button>
-    <h3>{{ userState }}</h3>
+    <GameSearch />
+    <p>{{ userState }}</p>
     <button v-if="userState.loggedIn" @click="goToProfilePage">
       <ProfilePicture :header="true" />
     </button>
@@ -11,7 +12,6 @@
       <ProfilePicture :header="true" />
     </button>
   </header>
-  <GameSearch />
 </template>
 
 <script setup>
@@ -22,7 +22,8 @@ import ProfilePicture from './ProfilePicture.vue'
 import { userState } from '@/UserData'
 
 function goToProfilePage() {
-  router.push(`/profile/${userState.userType}/${userState.username}`)
+  // router.push(`/profile/${userState.userType}/${userState.username}`)
+  window.location.href = `/profile/${userState.userType}/${userState.username}`
 }
 
 function goToLoginPage() {

@@ -13,8 +13,10 @@ export class Game {
     themes = [],
     date = null,
     ageRatings = [],
-    ratings = 0,
-    timePlayed = 0,
+    rating = 0,
+    timesPlayed = 0,
+    hoursPlayed = 0,
+    recordsMade = 0,
     playedBy = [],
     comments = [],
     imageId = 0,
@@ -34,8 +36,10 @@ export class Game {
     this.themes = themes
     this.date = date
     this.ageRatings = ageRatings
-    this.ratings = ratings
-    this.timePlayed = timePlayed
+    this.rating = rating
+    this.timesPlayed = timesPlayed
+    this.hoursPlayed = hoursPlayed
+    this.recordsMade = recordsMade
     this.playedBy = playedBy
     this.comments = comments
     this.imageId = imageId
@@ -58,8 +62,10 @@ export class Game {
       gameObject.themes,
       gameObject.first_release_date,
       gameObject.age_ratings,
-      gameObject.ratings,
-      gameObject.timePlayed,
+      gameObject.average_rating,
+      gameObject.average_times_played,
+      gameObject.average_hours_played,
+      gameObject.records_made,
       gameObject.played_by,
       gameObject.comments,
       gameObject.imageId,

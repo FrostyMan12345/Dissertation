@@ -3,6 +3,10 @@
     <div class="modal-wrapper">
       <div class="modal-container" ref="target">
         <h1>Log your experience</h1>
+        <p>
+          <!-- {{ props?.review }}{{ props?.review.value.review_content }}  -->
+          {{ hoursPlayed }}{{ rating }} {{ timesPlayed }}
+        </p>
         <div class="horizontal-container">
           <h3>Rating:</h3>
           <vue3-star-ratings v-model="rating" />
@@ -18,27 +22,28 @@
         </div>
         <div class="horizontal-container">
           <h3 for="checkbox">Would you like to write a review?</h3>
-          <input type="checkbox" id="checkbox" v-model="review" />
+          <input type="checkbox" id="checkbox" v-model="makeReview" />
         </div>
         <textarea
           style="width: 100%"
-          v-if="review"
+          v-if="makeReview"
           v-model="reviewContent"
-          placeholde="Write your review"
+          placeholder="Write your review"
         ></textarea>
         <div class="modal-footer">
           <div>
-            <button @click.stop="logGameData">Submit</button>
+            <button v-if="!edit" @click.stop="logGameData">Submit</button>
+            <button v-else @click.stop="editGameData">Submit</button>
           </div>
         </div>
-        <p>{{ review }}</p>
+        <!-- <p>{{ reviewContent }}</p> -->
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref, toRaw } from 'vue'
+import { defineProps, defineEmits, ref, toRaw, computed } from 'vue'
 import { onClickOutside } from '@vueuse/core'
 import { useRoute } from 'vue-router'
 import { userState } from '@/UserData'
@@ -47,16 +52,23 @@ import axios from 'axios'
 const props = defineProps({
   modalActive: Boolean,
   game: Object,
+  review: Object,
+  edit: Boolean,
+  rating: Number,
+  hoursPlayed: Number,
+  timesPlayed: Number,
 })
 
 const cleanedGame = JSON.parse(JSON.stringify(toRaw(props.game)))
 const emit = defineEmits(['modal-exit'])
-const rating = ref(0)
+const rating = ref(props.rating || 0)
 const target = ref(null)
-const reviewContent = ref('')
-const review = ref(false)
-const hoursPlayed = ref(0)
-const timesPlayed = ref(0)
+const makeReview = ref(props.review?.review_content || false)
+const reviewContent = ref(props.review.value?.review_content || '')
+const review = computed(() => props.review?.review_content !== '')
+const hoursPlayed = ref(props.hoursPlayed || 0)
+const timesPlayed = ref(props.timesPlayed || 0)
+const reactions = ref(props.review.reactions)
 const route = useRoute()
 const gameId = route.params.id
 
@@ -66,9 +78,10 @@ async function logGameData() {
   try {
     var response = {}
     console.log(userState)
+    console.log(makeReview.value)
 
-    if (review.value) {
-      response = await axios.post(`http://localhost:5000/game/${gameId}/log`, {
+    if (review.value && makeReview.value) {
+      response = await axios.post(`http://localhost:5000/game/${gameId}/record/make`, {
         userState,
         rating: rating.value,
         timesPlayed: timesPlayed.value,
@@ -86,7 +99,54 @@ async function logGameData() {
         game: props.game,
       })
     } else {
-      response = await axios.post(`http://localhost:5000/game/${gameId}/log`, {
+      response = await axios.post(`http://localhost:5000/game/${gameId}/record/make`, {
+        userState,
+        rating: rating.value,
+        timesPlayed: timesPlayed.value,
+        hoursPlayed: hoursPlayed.value,
+        game: props.game,
+      })
+    }
+    const updateResponse = await axios.post(`http://localhost:5000/game/${gameId}/update`)
+
+    const gameInfo = response.data
+    console.log(gameInfo)
+    emit('modal-exit')
+    location.reload()
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+async function editGameData() {
+  try {
+    var response = {}
+    // console.log(props.review.value)
+    // console.log(reactions)
+    // console.log(props.review.value.reactions)
+    // console.log(props.review.value.review_id)
+    console.log(props?.review?.value?.likes)
+
+    if (review.value && makeReview.value) {
+      response = await axios.post(`http://localhost:5000/game/${gameId}/record/edit`, {
+        userState,
+        rating: rating.value,
+        timesPlayed: timesPlayed.value,
+        hoursPlayed: hoursPlayed.value,
+        review: {
+          username: userState.username,
+          review_content: reviewContent.value,
+          likes: props?.review?.value?.likes || 0,
+          dislikes: props?.review?.value?.dislikes || 0,
+          created: Date.now(),
+          edited: true,
+          review_id: props?.review?.value?.review_id || -1,
+          reactions: props?.review?.value?.reactions || [],
+        },
+        game: props.game,
+      })
+    } else {
+      response = await axios.post(`http://localhost:5000/game/${gameId}/record/edit`, {
         userState,
         rating: rating.value,
         timesPlayed: timesPlayed.value,
@@ -97,7 +157,9 @@ async function logGameData() {
 
     const gameInfo = response.data
     console.log(gameInfo)
+    const updateResponse = await axios.post(`http://localhost:5000/game/${gameId}/update`)
     emit('modal-exit')
+
     location.reload()
   } catch (error) {
     console.error(error)

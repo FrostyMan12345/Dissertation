@@ -7,13 +7,17 @@ const gameSchema = new mongoose.Schema(
     platforms: [String],
     genres: [String],
     id: { type: Number },
-    cover: { type: Number },
+    cover: { type: Object },
     summary: { type: String },
     expanded_games: [String],
     ports: [String],
     keywords: [String],
     age_ratings: [String],
     involved_companies: [String],
+    average_rating: { type: Number },
+    average_times_played: { type: Number },
+    average_hours_played: { type: Number },
+    records_made: { type: Number },
     played_by: [
       {
         // user_id: { type: mongoose.Schema.Types.ObjectId, refPath: "user_type" },

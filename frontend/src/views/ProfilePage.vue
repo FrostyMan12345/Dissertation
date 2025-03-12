@@ -1,60 +1,80 @@
 <template>
-  <h1>jchdevbc</h1>
-  <ProfilePicture />
-
-  <input type="file" @change="fileSelect">Update Image</input>
-  <!-- <img :src="'http://localhost:5000/Uploads/20211201_195000.jpg'"> -->
+  <div class="horizontal-container">
+    <ProfilePicture :image="profileImage" />
+    <h1>{{ username }}</h1>
+  </div>
+  <input
+    v-if="userState.username == username && userState.userType == userType"
+    type="file"
+    @change="fileSelect"
+  />
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import ProfilePicture from '@/components/ProfilePicture.vue'
-import { userState } from '@/UserData';
+import { userState } from '@/UserData'
 
 const fileInput = ref(null)
-const maxFileSize = 3 * 1024 * 1024;
+const maxFileSize = 3 * 1024 * 1024
 const route = useRoute()
-const gameId = route.params.username
+const username = route.params.username
 const userType = route.params.userType
+const profileImage = ref('')
+const userId = ref(0)
 
 function fileSelect() {
-  const fileSelected = event.target.files[0]; 
+  const fileSelected = event.target.files[0]
   if (fileSelected) {
-    if (fileSelected.type.startsWith("image/")) {
-      if(fileSelected.size < maxFileSize){
-        fileInput.value = fileSelected;
+    if (fileSelected.type.startsWith('image/')) {
+      if (fileSelected.size < maxFileSize) {
+        fileInput.value = fileSelected
         uploadFile()
       } else {
-        console.log("File too large")
+        console.log('File too large')
       }
     } else {
-      fileInput.value = null;
-      console.log("Please select a valid image file (JPG, PNG, GIF, etc.)");
+      fileInput.value = null
+      console.log('Please select a valid image file (JPG, PNG, GIF, etc.)')
     }
   }
-
 }
 
 async function uploadFile() {
-  // console.log("aaaaaaaaaaaaa", fileInput, fileInput.value)
-  const formData = new FormData();
-  formData.append("fileToUpload", fileInput.value);
-
+  const formData = new FormData()
+  formData.append('fileToUpload', fileInput.value)
   try {
-    // console.log(userState.userType, userState.username);
-    const response = await axios.post(`http://localhost:5000/get/${userState.userType}/${userState.username}`);
-  console.log(response.data.image)
-  userState.setImage(response.data.image)
-} catch (error) {
-  console.log(`Failure ${error}`)
-}
+    const response = await axios.post(
+      `http://localhost:5000/user/${userState.userType}/${userState.userId}/update-image`,
+      formData,
+    )
+    console.log(response.data.image)
+    userState.setImage(response.data.image)
+  } catch (error) {
+    console.log(`Failure ${error}`)
+  }
 }
 
 async function getUserData() {
-
+  try {
+    console.log(userType, username)
+    const response = await axios.get(`http://localhost:5000/get/${userType}/${username}`)
+    console.log(response.data)
+    userId.value = response.data.user._id
+    // console.log()
+    profileImage.value = response.data.user.image
+    console.log(profileImage.value)
+    console.log(userId.value)
+  } catch (error) {
+    console.log(error)
+  }
 }
+
+onMounted(() => {
+  getUserData()
+})
 </script>
 
 <style scoped></style>

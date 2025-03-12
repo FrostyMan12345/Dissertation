@@ -25,6 +25,7 @@
         :image="played.user_id?.image"
         class="article"
       />
+      <hr />
     </div>
   </div>
 </template>
@@ -71,5 +72,12 @@ onMounted(() => {
 <style scoped>
 .article {
   gap: 10px;
+}
+
+hr {
+  height: 1px;
+  color: rgba(255, 255, 255, 0);
+  padding: 0px;
+  gap: 1px;
 }
 </style>

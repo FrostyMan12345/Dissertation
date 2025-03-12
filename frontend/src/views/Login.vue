@@ -37,29 +37,33 @@ async function accountLogin(username, password) {
   }
 }
 
-async function accountRegister(username, password) {
-  try {
-    const response = await axios.post('http://localhost:5000/register/' + loginType.value, {
-      username,
-      password,
-    })
-    console.log(response.data)
-    const id = response.data.userId
-    switch (loginType.value) {
-      case 'user':
-        userState.loginUser(id)
-        break
-      case 'admin':
-        userState.loginAdmin(id)
-        break
-      case 'developer':
-        userState.loginDeveloper(id)
-        break
+async function accountRegister(username, password, passwordConfirm) {
+  if (password === passwordConfirm) {
+    try {
+      const response = await axios.post('http://localhost:5000/register/' + loginType.value, {
+        username,
+        password,
+      })
+      console.log(response.data)
+      const id = response.data.userId
+      switch (loginType.value) {
+        case 'user':
+          userState.loginUser(id, username, imageName)
+          break
+        case 'admin':
+          userState.loginAdmin(id, username, imageName)
+          break
+        case 'developer':
+          userState.loginDeveloper(id, username, imageName)
+          break
+      }
+      console.log(userState)
+    } catch (error) {
+      console.error('Error registering account:', error)
+      console.log(error.response.data.message)
     }
-    console.log(userState)
-  } catch (error) {
-    console.error('Error registering account:', error)
-    console.log(error.response.data.message)
+  } else {
+    console.log('Passwords do not match')
   }
 }
 
@@ -91,9 +95,15 @@ function changeLoginType(type) {
       <h3>Password:</h3>
       <input type="password" v-model="password" placeholder="Password" />
     </div>
+    <div v-if="!login" class="horizontal-container">
+      <h3>Confirm Password:</h3>
+      <input type="password" v-model="passwordConfirm" placeholder="Confirm Password" />
+    </div>
 
     <button v-if="login" @click="accountLogin(username, password)">Sign In</button>
-    <button v-else @click="accountRegister(username, password)">Register New Account</button>
+    <button v-else @click="accountRegister(username, password, passwordConfirm)">
+      Register New Account
+    </button>
 
     <hr />
 

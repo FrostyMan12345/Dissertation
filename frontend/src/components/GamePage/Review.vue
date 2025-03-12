@@ -1,10 +1,11 @@
 <template>
   <div class="review">
     <div class="horizontal-container">
-      <h4>{{ reviewInfo?.username }}</h4>
-      <a :href="`http://localhost:5173/profile/${userState.userType}/${reviewInfo?.username}`">{{
-        reviewInfo?.username
-      }}</a>
+      <h4>
+        <a :href="`http://localhost:5173/profile/${userState.userType}/${reviewInfo?.username}`">{{
+          reviewInfo?.username
+        }}</a>
+      </h4>
       <ProfilePicture :image="image" />
     </div>
     <p>{{ reviewInfo?.review_content }}</p>
@@ -30,7 +31,10 @@
         </button>
         <label :class="{ disliked: isDisliked }"> Dislikes: {{ dislikes }} </label>
       </div>
-      <label>Rating Given: {{ rating }}</label>
+      <div class="horizontal-container">
+        <vue3-star-ratings v-model="rating" />
+        <label>({{ rating }})</label>
+      </div>
       <!-- <label>reaction: {{ reaction }}</label>
       <label>{{ hasReacted }}</label> -->
     </div>
@@ -59,6 +63,7 @@ const isDisliked = ref(props.reaction == -1)
 const reaction = ref(props.reaction)
 const hasReacted = ref(props.reactedPrior)
 const reactionUpdated = ref(false)
+const rating = props.rating
 const route = useRoute()
 const gameId = route.params.id
 const isDisabled = ref(false)
@@ -123,9 +128,12 @@ async function updateReaction(reaction, newLikes, newDislikes) {
 .review {
   border: 1px solid blue;
   background-color: azure;
-  width: 50%;
+  min-width: 50%;
+  max-width: 60%;
   height: max-content;
   padding: 10px;
+  border-radius: 10px;
+  gap: 10px;
 }
 
 .like-dislike {

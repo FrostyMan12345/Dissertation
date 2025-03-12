@@ -17,29 +17,46 @@
         <p>Ports: {{ game?.ports?.join(', ') || 'None' }}</p>
         <p>Expanded Games: {{ game?.expandedGames?.join(', ') || 'None' }}</p>
       </div>
-      <div class="game-metrics">
-        <img
-          :src="`https://images.igdb.com/igdb/image/upload/t_720p/${game.imageId}.jpg`"
-          alt="Game Cover"
-          class="game-image"
-        />
-        <hr />
-        <p><strong>Rating:</strong> {{ game?.ratings ?? 'N/A' }}</p>
-        <hr />
-        <p><strong>Average Time Played:</strong> {{ game?.timePlayed ?? 'Unknown' }} hours</p>
+      <div class="vertical-container-2">
+        <div class="game-metrics">
+          <img
+            :src="`https://images.igdb.com/igdb/image/upload/t_720p/${game.imageId}.jpg`"
+            alt="Game Cover"
+            class="game-image"
+          />
+          <hr />
+          <p><strong>Average Rating:</strong> {{ game?.rating ?? 'N/A' }}</p>
+          <vue3-star-ratings v-model="rating" />
+          <hr />
+          <p><strong>Average Hours Played:</strong> {{ game?.hoursPlayed ?? 'Unknown' }} hours</p>
+          <hr />
+          <p><strong>Average Times Played:</strong> {{ game?.timesPlayed ?? 'Unknown' }} times</p>
+          <hr />
+          <p><strong>Records Created:</strong> {{ game?.recordsMade ?? 'Unknown' }}</p>
+        </div>
+        <div v-if="!hasLogged">
+          <button @click="emit('make-record')" v-if="userState.loggedIn">+ Create a Record</button>
+          <p v-else>Log in to log your experience</p>
+        </div>
+        <div v-else>
+          <button @click="emit('edit-record')" v-if="userState.loggedIn">Edit your Record</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { defineEmits } from 'vue'
+import { userState } from '@/UserData'
 
 const props = defineProps({
   game: Object,
+  hasLogged: Boolean,
 })
 
-const imageUrl = 'https://images.igdb.com/igdb/image/upload/t_720p/'
+const rating = props.game?.rating
+const emit = defineEmits(['make-record', 'edit-record'])
 </script>
 
 <style scoped>
@@ -53,6 +70,15 @@ const imageUrl = 'https://images.igdb.com/igdb/image/upload/t_720p/'
 .vertical-container {
   justify-content: center;
   align-items: flex-start;
+  gap: 20px;
+}
+
+.vertical-container-2 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
 }
 
 .game-image {
@@ -77,5 +103,17 @@ const imageUrl = 'https://images.igdb.com/igdb/image/upload/t_720p/'
 hr {
   width: 100%;
   color: blue;
+}
+
+button {
+  color: rgb(0, 0, 0);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0);
+  border: solid 1px blue;
+  padding: 5px;
+}
+
+button:hover {
+  background-color: rgb(0, 187, 255);
 }
 </style>

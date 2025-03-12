@@ -8,11 +8,11 @@
       <input
         type="radio"
         v-model="chosenCriteria"
-        id="most played"
+        id="most popular"
         name="criteria"
-        value="Most Played"
+        value="Most Popular"
       />
-      <label for="most played" margin-left="10px">Most Played</label><br />
+      <label for="most popular" margin-left="10px">Most Popular</label><br />
       <input
         type="radio"
         v-model="chosenCriteria"
@@ -27,18 +27,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, defineEmits, defineProps, onMounted } from 'vue'
 
-var currentCriteria = ref('Rating')
+const props = defineProps({
+  rankValue: String,
+})
+
+var currentCriteria = ref(props.rankValue)
 var chosenCriteria = ref('')
 
-function checkValue() {
-  alert(`Current Criteria: ${currentCriteria.value}, Chosen Criteria: ${chosenCriteria.value}`)
+function changeCriteria() {
+  sessionStorage.setItem('rankingCriteria', chosenCriteria.value)
+  currentCriteria.value = chosenCriteria.value
+  emit('change-ranking', currentCriteria.value)
 }
 
-function changeCriteria() {
-  currentCriteria.value = chosenCriteria.value
-}
+const emit = defineEmits(['change-ranking'])
+
+onMounted(() => {
+  chosenCriteria.value = currentCriteria.value
+})
 </script>
 
 <style scoped>
@@ -48,5 +56,16 @@ function changeCriteria() {
   width: max-content;
   height: max-content;
   padding: 10px 10px 10px 10px;
+}
+button {
+  color: rgb(0, 0, 0);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0);
+  border: solid 1px blue;
+  padding: 5px;
+}
+
+button:hover {
+  background-color: rgb(0, 187, 255);
 }
 </style>

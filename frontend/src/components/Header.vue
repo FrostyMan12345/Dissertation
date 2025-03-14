@@ -4,6 +4,7 @@
       <img src="../assets/home_icon.png" alt="Home" class="header-button" />
     </button>
     <GameSearch />
+    <UserSearch />
     <p>{{ userState }}</p>
     <button v-if="userState.loggedIn" @click="goToProfilePage">
       <ProfilePicture :header="true" />
@@ -17,7 +18,8 @@
 <script setup>
 import { ref } from 'vue'
 import router from '@/router'
-import GameSearch from './GamePage/GameSearch.vue'
+import GameSearch from './seacrh_bar/GameSearch.vue'
+import UserSearch from './seacrh_bar/UserSearch.vue'
 import ProfilePicture from './ProfilePicture.vue'
 import { userState } from '@/UserData'
 

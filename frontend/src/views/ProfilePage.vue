@@ -49,6 +49,7 @@ async function uploadFile() {
     const response = await axios.post(
       `http://localhost:5000/user/${userState.userType}/${userState.userId}/update-image`,
       formData,
+      userState.image,
     )
     console.log(response.data.image)
     userState.setImage(response.data.image)

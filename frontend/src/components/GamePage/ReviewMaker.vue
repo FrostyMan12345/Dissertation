@@ -126,6 +126,7 @@ async function editGameData() {
     // console.log(props.review.value.reactions)
     // console.log(props.review.value.review_id)
     console.log(props?.review?.value?.likes)
+    console.log(props?.review)
 
     if (review.value && makeReview.value) {
       response = await axios.post(`http://localhost:5000/game/${gameId}/record/edit`, {

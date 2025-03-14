@@ -26,6 +26,8 @@ export class UserData {
     this.loggedIn = true
     this.username = username
     this.userType = 'User'
+    this.admin = false
+    this.developer = false
     this.setId(userId)
     this.setImage(fileName)
   }
@@ -34,6 +36,7 @@ export class UserData {
     this.loggedIn = true
     this.username = username
     this.admin = true
+    this.developer = false
     this.userType = 'Admin'
     this.setId(userId)
     this.setImage(fileName)
@@ -43,6 +46,7 @@ export class UserData {
     this.loggedIn = true
     this.username = username
     this.developer = true
+    this.admin = false
     this.userType = 'Developer'
     this.setId(userId)
     this.setImage(fileName)

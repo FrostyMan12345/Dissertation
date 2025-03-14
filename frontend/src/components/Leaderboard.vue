@@ -1,7 +1,6 @@
 <template>
-  <div class="horizontal-container">
-    {{ leaderboardLength.va }}
-    <table v-if="leaderboardLength > 0" width="80%">
+  <div style="width: 100%" class="horizontal-container">
+    <table v-if="leaderboardLength > 0" width="100%">
       <thead>
         <tr>
           <th><h3>Ranking</h3></th>
@@ -20,19 +19,25 @@
           <td>
             <h3>
               <a
-                style="color: white; text-decoration: none"
+                style="color: white; text-decoration: none; text-align: start"
                 :href="`http://localhost:5173/game/${game.id}`"
                 >{{ game.name }}</a
               >
             </h3>
           </td>
-          <td>
+          <td v-if="game.cover">
             <img
+              v-show="imagesLoaded[index]"
               :src="`https://images.igdb.com/igdb/image/upload/t_cover_small/${game?.cover?.image_id}.jpg`"
               alt="Game Cover"
               class="game-image"
               crossorigin="anonymous"
+              @load="imagesLoaded[index] = true"
             />
+            <h3 v-if="!imagesLoaded[index]" style="text-align: center">Loading Image</h3>
+          </td>
+          <td v-else>
+            <h6 style="text-align: center">Unavailable</h6>
           </td>
           <td>
             <h3 v-if="rankingValue === 'Rating'" style="font-weight: bold; text-align: center">
@@ -59,6 +64,11 @@
       </tbody>
     </table>
 
+    <div v-else style="align-self: center; justify-self: center" class="horizontal-container">
+      <h3 for="loading">Leaderboard Loading</h3>
+      <img src="../assets/loading.gif" alt="Loading..." class="loading-icon" id="loading" />
+    </div>
+
     <!-- {{ rankingValue }} -->
     <div class="vertical-sticky-container">
       <CriteriaSelector
@@ -66,13 +76,14 @@
         class="shadowed"
         @change-ranking="changeCriteria"
       />
+      <!-- <CatergoryFilter class="shadowed" />
       <vue-awesome-paginate
         v-if="leaderboardLength > 0"
         :total-items="leaderboardLength"
         :items-per-page="itemsPerPage"
         :max-pages-shown="3"
         v-model="leaderboardPage"
-      />
+      /> -->
     </div>
   </div>
 </template>
@@ -81,13 +92,15 @@
 import { onMounted, ref, reactive, computed } from 'vue'
 import axios from 'axios'
 import CriteriaSelector from './CriteriaSelector.vue'
+import CatergoryFilter from './CatergoryFilter.vue'
 
 const leaderboardPage = ref(1)
 const itemsPerPage = 500
 const startItem = ref(500 * leaderboardPage.value)
 const rankingValue = ref(sessionStorage.getItem('rankingCriteria') || 'Rating')
-const leaderboard = reactive([])
+const leaderboard = ref([])
 const leaderboardLength = ref(0)
+const imagesLoaded = ref([])
 const changeCriteria = (criteria) => {
   rankingValue.value = criteria
   location.reload()
@@ -95,6 +108,8 @@ const changeCriteria = (criteria) => {
 const paginatedLeaderboard = computed(() => {
   const startIndex = (leaderboardPage.value - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
+  const slicedLeaderboard = leaderboard.value.slice(startIndex, endIndex)
+  imagesLoaded.value = new Array(slicedLeaderboard.length).fill(false)
   return leaderboard.value.slice(startIndex, endIndex)
 })
 
@@ -165,11 +180,18 @@ th {
   justify-content: center;
   align-items: center;
   top: 20px;
+  left: 80%;
   background: white;
   padding: 10px;
   border-radius: 5px;
   z-index: 100;
   width: 20%;
   row-gap: 10px;
+}
+
+.loading-icon {
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
 }
 </style>

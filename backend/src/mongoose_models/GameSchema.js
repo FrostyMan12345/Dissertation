@@ -27,7 +27,26 @@ const gameSchema = new mongoose.Schema(
         hours_played: { type: Number },
         times_played: { type: Number },
         edited: { type: Boolean },
-        review: { type: Object, required: false },
+        review: {
+          type: {
+            username: { type: String },
+            review_content: { type: String },
+            likes: { type: Number },
+            dislikes: { type: Number },
+            created: { type: Number },
+            edited: { type: Number, required: false },
+            review_id: { type: mongoose.Schema.Types.ObjectId },
+            reactions: {
+              type: [
+                {
+                  user_id: { type: mongoose.Schema.Types.ObjectId },
+                  reaction: { type: Number },
+                },
+              ],
+            },
+          },
+          required: false,
+        },
       },
     ],
   },

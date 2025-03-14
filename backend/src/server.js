@@ -9,6 +9,7 @@ const Developer = require("./mongoose_models/DeveloperSchema");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const path = require("path");
+const FileSystem = require("fs");
 const { resolve } = require("path");
 const multer = require("multer");
 
@@ -55,7 +56,7 @@ app.get("/", (req, res) => {
   res.send("Express backend is running!");
 });
 
-app.get("/search", async (req, res) => {
+app.get("/search/games", async (req, res) => {
   const { query } = req.query;
   console.log(query);
   try {
@@ -73,6 +74,38 @@ app.get("/search", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error retrieving games" });
+  }
+});
+
+app.get("/search/users", async (req, res) => {
+  const { query } = req.query;
+  console.log(query);
+  try {
+    const [users, admins] = await Promise.all([
+      User.find({ username: { $regex: query, $options: "i" } })
+        .select("username image")
+        .lean()
+        .limit(10)
+        .sort({ username: 1 }),
+
+      Admin.find({ username: { $regex: query, $options: "i" } })
+        .select("username image")
+        .lean()
+        .limit(10)
+        .sort({ username: 1 }),
+    ]);
+    const searchResults = [...users, ...admins]
+      .sort((user1, user2) => user1.username.localeCompare(user2.username))
+      .slice(0, 9);
+
+    res.status(200).json({
+      message: "Search Success",
+      results: searchResults,
+      admins: admins,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error retrieving users" });
   }
 });
 
@@ -310,8 +343,17 @@ app.post("/game/:id/reaction/update", async (req, res) => {
   const id = req.params.id;
   const { reaction, newLikes, newDislikes, userState, reactedPrior, reviewId } =
     req.body;
-  // console.log(reactedPrior, reaction);
+  console.log(
+    id,
+    reaction,
+    newLikes,
+    newDislikes,
+    userState,
+    reactedPrior,
+    reviewId
+  );
   try {
+    var findResponse = [];
     var reactionUpdate = {};
     var reactionResponse = [];
     if (reactedPrior) {
@@ -323,7 +365,14 @@ app.post("/game/:id/reaction/update", async (req, res) => {
             reaction, // Target specific reaction
         },
       };
+      findResponse = await Game.findOne(
+        {
+          id: id,
+          "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId),
+        }
 
+        // "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId), // Match the review's ID
+      );
       reactionResponse = await Game.findOneAndUpdate(
         {
           id: id, // Match game ID
@@ -360,6 +409,11 @@ app.post("/game/:id/reaction/update", async (req, res) => {
           "played_by.$[played].review.dislikes": newDislikes,
         },
       };
+      findResponse = await Game.findOne({
+        id: id,
+
+        "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId),
+      });
       reactionResponse = await Game.findOneAndUpdate(
         {
           id: id, // Ensure you're matching the correct game
@@ -376,8 +430,8 @@ app.post("/game/:id/reaction/update", async (req, res) => {
         }
       );
     }
-
-    // console.log(reactionResponse);
+    console.log(findResponse);
+    console.log(reactionResponse);
     res.status(200).json({ message: "Reaction Update Success" });
   } catch (error) {
     console.error("Reaction update failed: ", error);
@@ -536,6 +590,7 @@ app.post(
     const userId = req.params.id;
     const userType = req.params.userType;
     const fileName = req.file.filename;
+    const oldFile = req.body;
     console.log(userId, userType, fileName);
     var schema = User;
     if (userType === "Admin") {
@@ -557,10 +612,22 @@ app.post(
         newImageCommand,
         { returnDocument: "after" }
       );
+      if (oldImage !== "") {
+        const uploadsPath = path.join(__dirname, "uploads");
+        FileSystem.unlink(path.join(uploadsPath, oldFile), (error) => {
+          if (error) {
+            console.error(`Deleting old file failure: ${error}`);
+          } else {
+            console.log("Deleted old file");
+          }
+        });
+      }
+      res
+        .status(200)
+        .json({ message: `Update Image Success}`, image: fileName });
     } catch (error) {
       res.status(500).json({ message: `Update Image Failure: ${error}` });
     }
-    res.status(200).json({ message: `Update Image Success}`, image: fileName });
   }
 );
 
@@ -631,6 +698,7 @@ async function registerAccount(type, username, password, res) {
         username: username,
         password: passwordHash,
         games_played: [],
+        image: "",
       });
       console.log(registerResponse);
       return res.status(200).json({

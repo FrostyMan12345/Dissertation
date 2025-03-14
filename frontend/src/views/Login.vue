@@ -46,6 +46,7 @@ async function accountRegister(username, password, passwordConfirm) {
       })
       console.log(response.data)
       const id = response.data.userId
+      console.log(loginType.value)
       switch (loginType.value) {
         case 'user':
           userState.loginUser(id, username, imageName)
@@ -72,7 +73,9 @@ function toggleLogin() {
 }
 
 function changeLoginType(type) {
+  console.log(type)
   loginType.value = type
+  console.log(loginType.value)
 }
 </script>
 

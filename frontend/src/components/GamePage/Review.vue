@@ -35,8 +35,8 @@
         <vue3-star-ratings v-model="rating" />
         <label>({{ rating }})</label>
       </div>
-      <!-- <label>reaction: {{ reaction }}</label>
-      <label>{{ hasReacted }}</label> -->
+      <label>reaction: {{ reaction }}</label>
+      <label>{{ hasReacted }}</label>
     </div>
   </div>
 </template>
@@ -104,16 +104,18 @@ function dislikeReview() {
   }
 }
 
-async function updateReaction(reaction, newLikes, newDislikes) {
+async function updateReaction(newReaction, newLikes, newDislikes) {
   try {
+    console.log(newReaction)
     const response = await axios.post(`http://localhost:5000/game/${gameId}/reaction/update`, {
-      reaction,
+      reaction: newReaction,
       newLikes,
       newDislikes,
       userState,
       reactedPrior: hasReacted.value,
       reviewId: props.reviewInfo.review_id,
     })
+    reaction.value = newReaction
     likes.value = newLikes
     dislikes.value = newDislikes
     hasReacted.value = true

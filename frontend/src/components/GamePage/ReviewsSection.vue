@@ -6,7 +6,7 @@
       <h1>{{ reacted }}</h1>
       <h1>{{ reacted[played?.review.review_id] == undefined }}</h1> -->
       <!-- <h1>{{ played.user_id?.image }}</h1> -->
-      <!-- <h1>{{ played.user_id }}</h1> -->
+      <!-- <h1>{{ played.user_id?._id }}</h1> -->
       <Review
         v-if="reacted[played?.review.review_id] != undefine"
         :reviewInfo="played?.review"
@@ -14,6 +14,7 @@
         :reaction="reacted[played?.review.review_id]"
         :reactedPrior="true"
         :image="played.user_id?.image"
+        :userData="played"
         class="article"
       />
       <Review
@@ -23,6 +24,7 @@
         :reaction="0"
         :reactedPrior="false"
         :image="played.user_id?.image"
+        :userData="played"
         class="article"
       />
       <hr />

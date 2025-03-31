@@ -12,6 +12,7 @@ const path = require("path");
 const FileSystem = require("fs");
 const { resolve } = require("path");
 const multer = require("multer");
+const genrePop = require("./genrePop");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -652,6 +653,151 @@ app.get("/get/:userType/:username", async (req, res) => {
   }
 });
 
+app.get("/get/:userType/:username/recommendations", async (req, res) => {
+  const username = req.params.username;
+  const userType = req.params.userType;
+  console.log(`Getting user data of ${username} from the ${userType} table`);
+  var schema = User;
+  if (userType === "Admin") {
+    schema = Admin;
+  } else if (userType === "Developer") {
+    res
+      .status(404)
+      .json({ message: `Developer cannot recieve recommendations: ${error}` });
+    return;
+  }
+  try {
+    let recommendations = await getGameRecommendations(username, schema);
+    // console.log("Recommended Games:", recommendations);
+    console.log("Bazinga");
+    res.status(200).json({
+      message: "Get User Success",
+      recommendations: recommendations,
+    });
+  } catch (error) {
+    res.status(500).json({ message: `Get User Failure: ${error}` });
+  }
+});
+
+app.post(
+  "/set/:userType/:username/favourites/:game/:position",
+  async (req, res) => {
+    const game = req.params.game;
+    const userType = req.params.userType;
+    const position = req.params.position;
+    const username = req.params.username;
+    const userState = req.body;
+    console.log(userState);
+    console.log(
+      `Changing favoruite games list with ${game} in ${position} place`
+    );
+    var schema = User;
+    if (userType === "Admin") {
+      schema = Admin;
+    } else if (userType === "Developer") {
+      res.status(500).json({ message: "Developer cannot set favoruite games" });
+    }
+    const oldFavourites = userState.favouriteGames;
+    const newFavourites = {};
+    // console.log(position);
+    if (
+      new mongoose.Types.ObjectId(oldFavourites?.first?._id).equals(
+        new mongoose.Types.ObjectId(game)
+      )
+    ) {
+      oldFavourites.first = null;
+    }
+    if (
+      new mongoose.Types.ObjectId(oldFavourites?.second?._id).equals(
+        new mongoose.Types.ObjectId(game)
+      )
+    ) {
+      oldFavourites.second = null;
+    }
+    if (
+      new mongoose.Types.ObjectId(oldFavourites?.third?._id).equals(
+        new mongoose.Types.ObjectId(game)
+      )
+    ) {
+      oldFavourites.third = null;
+    }
+    console.log(oldFavourites?.third, new mongoose.Types.ObjectId(game));
+    console.log(oldFavourites);
+    if (position == 0) {
+      newFavourites.first = new mongoose.Types.ObjectId(game);
+      if (oldFavourites?.first != null) {
+        newFavourites.second = new mongoose.Types.ObjectId(
+          oldFavourites?.first?._id
+        );
+        if (oldFavourites?.second != null) {
+          newFavourites.third = new mongoose.Types.ObjectId(
+            oldFavourites?.second?._id
+          );
+        } else {
+          newFavourites.third = new mongoose.Types.ObjectId(
+            oldFavourites?.third?._id
+          );
+        }
+      } else {
+        newFavourites.second = new mongoose.Types.ObjectId(
+          oldFavourites?.second?._id
+        );
+        newFavourites.third = new mongoose.Types.ObjectId(
+          oldFavourites?.third?._id
+        );
+      }
+    } else if (position == 1) {
+      newFavourites.first = new mongoose.Types.ObjectId(
+        oldFavourites?.first?._id
+      );
+      newFavourites.second = new mongoose.Types.ObjectId(game);
+      if (oldFavourites?.second != null) {
+        newFavourites.third = new mongoose.Types.ObjectId(
+          oldFavourites?.second?._id
+        );
+      } else {
+        newFavourites.third = new mongoose.Types.ObjectId(
+          oldFavourites?.third?._id
+        );
+      }
+    } else {
+      newFavourites.first = new mongoose.Types.ObjectId(
+        oldFavourites?.first?._id
+      );
+      newFavourites.second = new mongoose.Types.ObjectId(
+        oldFavourites?.second?._id
+      );
+      newFavourites.third = new mongoose.Types.ObjectId(game);
+    }
+    try {
+      // console.log(newFavourites);
+      const favouriteUpdate = await schema
+        .findOneAndUpdate(
+          { username: username },
+          { $set: { favourite_games: newFavourites } },
+          { returnDocument: "after" }
+        )
+        .select("favourite_games")
+        .populate([
+          { path: "favourite_games.first", select: "name cover" },
+          { path: "favourite_games.second", select: "name cover" },
+          { path: "favourite_games.third", select: "name cover" },
+        ]);
+      // console.log(favouriteUpdate);
+      res.status(200).json({
+        message: "Successfully updated favourite games",
+        favourites: favouriteUpdate.favourite_games,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: "Failed to update user's favourite games",
+        error: error,
+      });
+    }
+  }
+);
+
 app.get("/leaderboard/:sortBy", async (req, res) => {
   const sortBy = req.params.sortBy;
   console.log("Bazinga");
@@ -716,17 +862,31 @@ async function registerAccount(type, username, password, res) {
 }
 
 async function loginAccount(type, username, password, res) {
-  if (type != "Users" && type != "Admin" && type != "Developer") {
-    return res.status(500).json({ message: "User type invalid" });
+  console.log(type);
+  var schema = User;
+  if (type === "Admin") {
+    schema = Admin;
+  } else if (type === "Developer") {
+    schema = Developer;
   }
   try {
     const passwordHash = getHash(password);
-    console.log(passwordHash);
-    const response = await db
-      .collection(type)
-      .findOne({ username: username, password: passwordHash });
+    var response = {};
+    if (schema === Developer) {
+      response = await schema.findOne({
+        username: username,
+        password: passwordHash,
+      });
+    } else {
+      response = await schema
+        .findOne({ username: username, password: passwordHash })
+        .populate([
+          { path: "favourite_games.first", select: "name cover" },
+          { path: "favourite_games.second", select: "name cover" },
+          { path: "favourite_games.third", select: "name cover" },
+        ]);
+    }
     console.log(response);
-    console.log(response._id);
     console.log(response.image);
     if (response) {
       return res.status(200).json({
@@ -734,6 +894,7 @@ async function loginAccount(type, username, password, res) {
         userId: response._id,
         username: username,
         image: response.image,
+        favouriteGames: response.favourite_games,
       });
     } else {
       return res
@@ -889,3 +1050,215 @@ function getAverage(values, lowRange, highRange) {
   console.log(average.toFixed(2));
   return parseFloat(average.toFixed(2));
 }
+
+async function getFavourites(schema, username) {
+  try {
+    const getFavouritesResponse = await schema
+      .findOne({ username: username })
+      .select("favourite_games");
+    console.log(getFavouritesResponse);
+    return getFavouritesResponse;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// async function updateFavouriteGenres(userType, userId) {
+//   var schema = User;
+//   if (userType === "Admin") {
+//     schema = Admin;
+//   } else if (userType === "Developer") {
+//     return [];
+//   }
+//   try {
+//     const getGamesPlayed = await schema
+//       .find({ _id: userId })
+//       .select("games_played")
+//       .populate({ path: "games_played.game_id", select: "genre" });
+//     console.log(getGamesPlayed);
+//   } catch (error) {
+//     console.log(`Error geting favourites: ${error}`);
+//     return;
+//   }
+//   var genrePopCopy = Object.assign({}, genrePop);
+//   games_played.forEach((game) => {
+//     game._id.genres.forEach((genre) => {
+//       if (genres.some((g) => g.name === genre)) {
+//         genrePopCopy[genre] = (genrePopCopy[genre] || 0) + 1;
+//       }
+//     });
+//   });
+//   console.log(genrePopCopy);
+//   console.log(length(getGamesPlayed));
+//   Object.keys(genrePopCopy).forEach((key) => {
+//     genrePopCopy[key] = genrePopCopy[key] / getGamesPlayed.length;
+//   });
+// }
+
+function jaccardSimilarity(setA, setB) {
+  const intersection = new Set([...setA].filter((x) => setB.has(x)));
+  const union = new Set([...setA, ...setB]);
+  return union.size === 0 ? 0 : intersection.size / union.size;
+}
+
+function cosineSimilarity(vecA, vecB) {
+  let dotProduct = 0,
+    magA = 0,
+    magB = 0;
+
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    magA += vecA[i] ** 2;
+    magB += vecB[i] ** 2;
+  }
+
+  return magA === 0 || magB === 0
+    ? 0
+    : dotProduct / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+
+async function getGameRecommendations(username, schema) {
+  try {
+    console.log("Getting user recommendations");
+    // Fetch user and their games
+    const user = await schema
+      .findOne({ username: username })
+      .populate([
+        { path: "favourite_games.first" },
+        { path: "favourite_games.second" },
+        { path: "favourite_games.third" },
+        { path: "games_played.game_id" },
+      ]);
+
+    if (!user) {
+      console.log("User not found");
+      return [];
+    }
+    console.log(user);
+
+    // Collect user game preferences
+    let userGames = new Set();
+    try {
+      if (user.favourite_games.first)
+        userGames.add(user.favourite_games.first._id.toString());
+    } catch (error) {
+      console.log("1st Favourite not specified");
+    }
+    try {
+      if (user.favourite_games.second)
+        userGames.add(user.favourite_games.second._id.toString());
+    } catch (error) {
+      console.log("2nd Favourite not specified");
+    }
+    try {
+      if (user.favourite_games.third)
+        userGames.add(user.favourite_games.third._id.toString());
+    } catch (error) {
+      console.log("3rd Favourite not specified");
+    }
+    user.games_played.forEach((game) =>
+      userGames.add(game.game_id._id.toString())
+    );
+
+    let userGenres = new Set();
+    let userThemes = new Set();
+    let userKeywords = new Set();
+    let relevantGenres = new Set();
+    let relevantThemes = new Set();
+    let relevantKeywords = new Set();
+    let userRatings = [];
+    let userHoursPlayed = [];
+    let userTimesPlayed = [];
+    let gameArray = Array.from(userGames);
+    gameArray = gameArray.map((gameId) => new mongoose.Types.ObjectId(gameId));
+    const gameDataArray = await Game.find({ _id: { $in: gameArray } });
+    let index = 0;
+    for (let gameData of gameDataArray) {
+      // console.log(gameData);
+      if (gameData) {
+        gameData.genres.forEach((genre) => relevantGenres.add(genre));
+        gameData.themes.forEach((theme) => relevantThemes.add(theme));
+        gameData.keywords.forEach((keyword) => relevantKeywords.add(keyword));
+        gameData.genres.forEach((genre) => userGenres.add(genre.name));
+        gameData.themes.forEach((theme) => userThemes.add(theme.name));
+        gameData.keywords.forEach((keyword) => userKeywords.add(keyword.name));
+
+        let playedGame = user.games_played.find(
+          (g) => g.game_id._id.toString() === gameArray[index]
+        );
+        if (playedGame) {
+          console.log(`${gameData.game_id._id} has been played`);
+          userRatings.push(playedGame.rating || 0);
+          userHoursPlayed.push(playedGame.hours_played || 0);
+          userTimesPlayed.push(playedGame.times_played || 0);
+        }
+      }
+      index = index + 1;
+    }
+
+    console.log(userGenres);
+    console.log(userThemes);
+    console.log(userKeywords);
+    console.log(Array.from(relevantGenres));
+    console.log(Array.from(relevantThemes));
+    console.log(Array.from(relevantKeywords));
+    let relevantGames = await Game.aggregate([
+      {
+        $match: {
+          $or: [
+            { genres: { $in: Array.from(relevantGenres) } },
+            { themes: { $in: Array.from(relevantThemes) } },
+            { keywords: { $in: Array.from(relevantKeywords) } },
+          ],
+        },
+      },
+    ]);
+    console.log(relevantGames.length);
+    let recommendations = [];
+    let count = 0;
+    for (let game of relevantGames) {
+      if (userGames.has(game._id.toString())) continue;
+      let gameGenres = new Set((game.genres ?? []).map((g) => g.name));
+      let gameThemes = new Set((game.themes ?? []).map((t) => t.name));
+      let gameKeywords = new Set((game.keywords ?? []).map((k) => k.name));
+
+      // console.log("Game Genres:", Array.from(gameGenres));
+      // console.log("Game Themes:", Array.from(gameThemes));
+      // console.log("Game Keywords:", Array.from(gameKeywords));
+      let genreSim = jaccardSimilarity(userGenres, gameGenres);
+      let themeSim = jaccardSimilarity(userThemes, gameThemes);
+      let keywordSim = jaccardSimilarity(userKeywords, gameKeywords);
+      let finalScore = 0;
+      if (game.playedBy && game.playedBy.length > 0) {
+        let gameRatings = game.played_by.map((g) => g.rating || 0);
+        // let gameHoursPlayed = game.played_by.map((g) => g.hours_played || 0);
+        // let gameTimesPlayed = game.played_by.map((g) => g.times_played || 0);
+
+        let ratingSim = cosineSimilarity(userRatings, gameRatings);
+        // let hoursSim = cosineSimilarity(userHoursPlayed, gameHoursPlayed);
+        // let timesSim = cosineSimilarity(userTimesPlayed, gameTimesPlayed);
+        let jaccardScore = 0.3 * genreSim + 0.3 * themeSim + 0.4 * keywordSim;
+        let cosineScore = ratingSim;
+
+        finalScore = 0.5 * jaccardScore + 0.5 * cosineScore;
+      } else {
+        let jaccardScore = 0.3 * genreSim + 0.3 * themeSim + 0.4 * keywordSim;
+        finalScore = jaccardScore;
+      }
+
+      recommendations.push({ game, finalScore });
+    }
+    recommendations.sort((a, b) => b.finalScore - a.finalScore);
+
+    return recommendations.slice(0, 50);
+  } catch (error) {
+    console.error("Error fetching recommendations:", error);
+    return [];
+  }
+}
+
+// async function getUserRecommendations(userschema) {
+//   let recommendations = await getGameRecommendations("USER_ID_HERE", schema);
+//   console.log("Recommended Games:", recommendations);
+//   return recommendations;
+// }

@@ -5,12 +5,13 @@ import logging
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
+from itertools import islice
 
 from dataFunctions import *
 
 app = func.FunctionApp()
 
-client = MongoClient('mongodb+srv://rm8g22:YVFDtnZZT7k7m2aH@rm8g22-project-database.xkyqq.mongodb.net/Third_Year_Project?retryWrites=true&w=majority&appName=rm8g22-project-database')
+client = MongoClient('mongodb+srv://rm8g22:YVFDtnZZT7k7m2aH@rm8g22-project-database.xkyqq.mongodb.net/Third_Year_Project?retryWrites=true&w=majority&connectTimeoutMS=600000&maxPoolSize=50&socketTimeoutMS=600000&appName=rm8g22-project-database')
 db = client["Third_Year_Project"] 
 gameCollection = db["Games"] 
 
@@ -58,20 +59,22 @@ def refresh_credentials(req: func.HttpRequest) -> func.HttpResponse:
 def get_count(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(body=json.dumps({"count": getNumberOfGames()}),mimetype="application/json")
 
-
-
 @app.route(route="db/count", methods=[func.HttpMethod.GET],auth_level=func.AuthLevel.FUNCTION)
 def get_count_db(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(body=json.dumps({"count": gameCollection.count_documents({})}),mimetype="application/json")
-
-
 
 @app.route(route="db/setup", methods=[func.HttpMethod.GET],auth_level=func.AuthLevel.ADMIN)
 def get_new_db(req: func.HttpRequest) -> func.HttpResponse:
     gameCollection.delete_many({})
     try:
-        gameCollection.insert_many(getCompleteDatabase())
+        db = getCompleteDatabase()
+        it = iter(db)  
+        slices = [list(islice(it, 30000)) for _ in range((len(db) + 30000 - 1) // 30000)]
+        for slice in slices:
+            gameCollection.insert_many(slice) # instering entire list at once does not work
+            logging.info("30000 games added")
     except Exception as e:
+        logging.exception(f"Error occurred while inserting data: {e}")
         return func.HttpResponse(body=json.dumps({"msg": f"Failed to setup database: {e}"}),mimetype="application/json")
     return func.HttpResponse(body=json.dumps({"msg": f"Database setup with {gameCollection.count_documents({})} items"}),mimetype="application/json")
 

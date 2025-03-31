@@ -4,14 +4,15 @@ const gameSchema = new mongoose.Schema(
   {
     name: { type: String },
     first_release_date: { type: String },
-    platforms: [String],
-    genres: [String],
+    platforms: [{ type: Object }],
+    genres: [{ type: Object }],
+    themes: [{ type: Object }],
     id: { type: Number },
     cover: { type: Object },
     summary: { type: String },
     expanded_games: [String],
-    ports: [String],
-    keywords: [String],
+    ports: [{ type: Object }],
+    keywords: [{ type: Object }],
     age_ratings: [String],
     involved_companies: [String],
     average_rating: { type: Number },
@@ -20,8 +21,8 @@ const gameSchema = new mongoose.Schema(
     records_made: { type: Number },
     played_by: [
       {
-        // user_id: { type: mongoose.Schema.Types.ObjectId, refPath: "user_type" },
-        user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        user_id: { type: mongoose.Schema.Types.ObjectId, refPath: "user_type" },
+        // user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         user_type: { type: String, enum: ["User", "Admin"] },
         rating: { type: Number },
         hours_played: { type: Number },
@@ -53,6 +54,8 @@ const gameSchema = new mongoose.Schema(
   { collection: "Games" }
 );
 
+const User = require("./UserSchema");
+const Admin = require("./AdminSchema");
 const Game = mongoose.model("Game", gameSchema);
 
 module.exports = Game;

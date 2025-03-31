@@ -7,6 +7,7 @@ import { Game } from '../Game'
 import ReviewsSection from '@/components/GamePage/ReviewsSection.vue'
 import { userState } from '@/UserData'
 import ReviewMaker from '@/components/GamePage/ReviewMaker.vue'
+import FavouriteChanger from '@/components/GamePage/FavouriteChanger.vue'
 
 const game = reactive(new Game())
 const imageID = ref(0)
@@ -17,7 +18,8 @@ const loggedRating = ref(0)
 const loggedReview = reactive({})
 const loggedTimesPlayed = ref(0)
 const loggedHoursPlayed = ref(0)
-const popup = ref(false)
+const recordPopup = ref(false)
+const favouritePopup = ref(false)
 const editing = ref(false)
 
 async function getGameData() {
@@ -51,17 +53,23 @@ async function getGameData() {
 function activateRecordModal() {
   console.log('toggle Modal')
   editing.value = false
-  popup.value = true
+  recordPopup.value = true
 }
 
 function activateEditModal() {
   console.log('toggle Modal')
   editing.value = true
-  popup.value = true
+  recordPopup.value = true
 }
 
 function closeModal() {
-  popup.value = false
+  recordPopup.value = false
+  favouritePopup.value = false
+}
+
+function activateFavouriteModal() {
+  favouritePopup.value = true
+  console.log('toggle Modal')
 }
 
 onMounted(() => {
@@ -77,12 +85,13 @@ onMounted(() => {
     :image-id="imageID"
     @make-record="activateRecordModal"
     @edit-record="activateEditModal"
+    @change-favourite="activateFavouriteModal"
   />
 
   <ReviewsSection :playedBy="game.playedBy" :dev-comments="game?.comments" />
   <ReviewMaker
     v-if="hasLogged !== null"
-    :modalActive="popup"
+    :modalActive="recordPopup"
     :edit="editing"
     :review="loggedReview"
     :rating="loggedRating"
@@ -91,6 +100,11 @@ onMounted(() => {
     :game="game"
     @modal-exit="closeModal"
   />
+  <FavouriteChanger
+    :modalActive="favouritePopup"
+    :game="game"
+    @modal-exit="closeModal"
+  ></FavouriteChanger>
   <!-- {{ loggedReview }} {{ loggedRating }} {{ loggedHoursPlayed }} {{ loggedTimesPlayed }} -->
 </template>
 

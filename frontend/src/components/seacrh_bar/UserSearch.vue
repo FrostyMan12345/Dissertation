@@ -118,7 +118,7 @@ function goToProfile(username) {
   background-color: white;
   border: 1px solid #ccc;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-height: 150px;
+  max-height: 300px;
   overflow-y: auto;
 }
 

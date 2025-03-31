@@ -4,6 +4,7 @@ export class UserData {
   constructor() {
     const savedData = JSON.parse(sessionStorage.getItem('userState'))
     if (savedData) {
+      console.log('indeed ', savedData)
       this.loggedIn = savedData.loggedIn
       this.username = savedData.username
       this.userId = savedData.userId
@@ -11,6 +12,7 @@ export class UserData {
       this.developer = savedData.developer
       this.userType = savedData?.userType
       this.profilePicture = savedData?.profilePicture
+      this.favouriteGames = savedData?.favouriteGames
     } else {
       this.loggedIn = false
       this.username = ''
@@ -19,25 +21,28 @@ export class UserData {
       this.developer = false
       this.userType = null
       this.profilePicture = null
+      this.favouriteGames = {}
     }
   }
 
-  loginUser(userId, username, fileName) {
+  loginUser(userId, username, fileName, favouriteGames) {
     this.loggedIn = true
     this.username = username
     this.userType = 'User'
     this.admin = false
     this.developer = false
+    this.favouriteGames = favouriteGames
     this.setId(userId)
     this.setImage(fileName)
   }
 
-  loginAdmin(userId, username, fileName) {
+  loginAdmin(userId, username, fileName, favouriteGames) {
     this.loggedIn = true
     this.username = username
     this.admin = true
     this.developer = false
     this.userType = 'Admin'
+    this.favouriteGames = favouriteGames
     this.setId(userId)
     this.setImage(fileName)
   }
@@ -67,12 +72,18 @@ export class UserData {
     this.admin = false
     this.developer = false
     this.username = ''
+    this.favouriteGames = {}
+    this.setImage(null)
   }
 
   setImage(name) {
     console.log(name)
     this.profilePicture = name
     this.saveState()
+  }
+
+  setFavoruiteGames(games) {
+    this.favouriteGames = games
   }
 }
 

@@ -15,11 +15,12 @@
 
 .pagination-container {
   display: flex;
+  width: 100%;
 }
 
 .paginate-buttons {
-  height: 40px;
-  width: 40px;
+  height: 35px;
+  width: 35px;
   cursor: pointer;
   background-color: rgb(242, 242, 242);
   border: 1px solid rgba(0, 38, 255, 0.448);

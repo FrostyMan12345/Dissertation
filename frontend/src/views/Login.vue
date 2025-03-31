@@ -15,20 +15,25 @@ async function accountLogin(username, password) {
       },
     })
     console.log(response.data)
-    console.log(response.data.userId)
     const id = response.data.userId
     const imageName = response.data.image
-    console.log(username)
+    const favouriteGames = response.data.favouriteGames
+    console.log(favouriteGames)
     switch (loginType.value) {
       case 'user':
-        userState.loginUser(id, username, imageName)
+        userState.loginUser(id, username, imageName, favouriteGames)
+        goToMainPage()
         break
       case 'admin':
-        userState.loginAdmin(id, username, imageName)
+        userState.loginAdmin(id, username, imageName, favouriteGames)
+        goToMainPage()
         break
       case 'developer':
-        userState.loginDeveloper(id, username, imageName)
+        userState.loginDeveloper(id, username, imageName, favouriteGames)
+        goToMainPage()
         break
+      default:
+        console.error('Faulty Login Type')
     }
     console.log(userState)
   } catch (error) {
@@ -49,19 +54,25 @@ async function accountRegister(username, password, passwordConfirm) {
       console.log(loginType.value)
       switch (loginType.value) {
         case 'user':
-          userState.loginUser(id, username, imageName)
+          userState.loginUser(id, username, undefined)
+          goToMainPage()
           break
         case 'admin':
-          userState.loginAdmin(id, username, imageName)
+          userState.loginAdmin(id, username, null)
+          goToMainPage()
           break
         case 'developer':
-          userState.loginDeveloper(id, username, imageName)
+          userState.loginDeveloper(id, username, undefined)
+          goToMainPage()
           break
+        default:
+          console.error('Faulty Register Type')
+          return
       }
       console.log(userState)
     } catch (error) {
       console.error('Error registering account:', error)
-      console.log(error.response.data.message)
+      console.log(error?.response.data.message)
     }
   } else {
     console.log('Passwords do not match')
@@ -76,6 +87,12 @@ function changeLoginType(type) {
   console.log(type)
   loginType.value = type
   console.log(loginType.value)
+}
+
+function goToMainPage() {
+  console.log('Switching page')
+  window.location.href = '/main'
+  console.log('Switched page')
 }
 </script>
 

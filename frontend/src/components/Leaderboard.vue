@@ -76,14 +76,14 @@
         class="shadowed"
         @change-ranking="changeCriteria"
       />
-      <!-- <CatergoryFilter class="shadowed" />
+      <!-- <CatergoryFilter class="shadowed" /> -->
       <vue-awesome-paginate
         v-if="leaderboardLength > 0"
         :total-items="leaderboardLength"
         :items-per-page="itemsPerPage"
         :max-pages-shown="3"
         v-model="leaderboardPage"
-      /> -->
+      />
     </div>
   </div>
 </template>

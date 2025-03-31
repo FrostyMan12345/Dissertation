@@ -41,6 +41,8 @@
         <div v-else>
           <button @click="emit('edit-record')" v-if="userState.loggedIn">Edit your Record</button>
         </div>
+
+        <button @click="emit('change-favourite')">Favourite</button>
       </div>
     </div>
   </div>

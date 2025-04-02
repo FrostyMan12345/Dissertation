@@ -100,11 +100,7 @@ onMounted(() => {
     :game="game"
     @modal-exit="closeModal"
   />
-  <FavouriteChanger
-    :modalActive="favouritePopup"
-    :game="game"
-    @modal-exit="closeModal"
-  ></FavouriteChanger>
+  <FavouriteChanger :modalActive="favouritePopup" :game="game" @modal-exit="closeModal" />
   <!-- {{ loggedReview }} {{ loggedRating }} {{ loggedHoursPlayed }} {{ loggedTimesPlayed }} -->
 </template>
 

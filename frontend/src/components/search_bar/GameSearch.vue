@@ -3,23 +3,22 @@
     <input
       type="search"
       v-model="input"
-      placeholder="Search for a user"
+      placeholder="Search for a game"
       @focus="searchIsFocused = true"
       @blur="handleBlur"
       @input="search"
       class="search-bar"
     />
     <div v-if="searchIsFocused" class="search-results">
-      <div v-for="profile in filteredUsers" :key="game">
-        <button class="search-result" @click="goToProfile(profile.username)">
+      <div v-for="game in filteredGames" :key="game">
+        <button class="search-result" @click="goToGame(game.id)">
           <div class="horizontal-container">
-            <ProfilePicture :image="profile.image" />
-            <p>{{ profile.username }}</p>
-            <!-- <img
+            <img
               :src="`https://images.igdb.com/igdb/image/upload/t_micro/${game.imageId}.jpg`"
               alt="Game Cover"
               class="game-image"
-            /> -->
+            />
+            <p>{{ game.name }}</p>
           </div>
         </button>
       </div>
@@ -31,43 +30,39 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import router from '@/router'
-import ProfilePicture from '../ProfilePicture.vue'
 
 const input = ref('')
 const searchIsFocused = ref(false)
-const userList = ref([])
-const filteredUsers = ref([])
-const adminList = ref([])
+const gamesList = ref([])
+const filteredGames = ref([])
 
 async function filteredSearch() {
   try {
     const response = await axios
-      .get('http://localhost:5000/search/users', {
-        params: { query: input.value },
+      .get('http://localhost:5000/search/games', {
+        params: { query: input.value, limit: 10, sort: 1 },
       })
       .catch((error) => {
         console.error('Error during Axios request:', error)
       })
     console.log(response.data)
-    userList.value = response.data.results
-    adminList.value = response.data.admins
-    console.log(adminList.value)
-    filteredUsers.value = userList.value
+    gamesList.value = response.data
+    filteredGames.value = gamesList.value
     console.log(
-      `adminList: ${userList.value}, filteredUsers: ${filteredUsers.value}, response: ${response.data}`,
+      `gamesList: ${gamesList.value}, filteredGames: ${filteredGames.value}, response: ${response.data}`,
     )
   } catch (error) {
-    console.error('Error fetching users:', error)
+    console.error('Error fetching games:', error)
   }
 }
 
 async function search() {
-  if (input.value.length >= 4) {
+  if (input.value.length > 3) {
     console.log('Seacrh Started')
     await filteredSearch()
   } else {
     console.log(`Not enough characters, ${input.value}`)
-    filteredUsers.value = userList.value
+    filteredGames.value = []
   }
 }
 
@@ -79,18 +74,8 @@ function handleBlur() {
   }, 10)
 }
 
-function goToProfile(username) {
-  var isAdmin = false
-  adminList.value.forEach((admin) => {
-    if (admin.username === username) {
-      isAdmin = true
-      window.location.href = `/profile/Admin/${username}`
-      return
-    }
-  })
-  if (!isAdmin) {
-    window.location.href = `/profile/User/${username}`
-  }
+function goToGame(id) {
+  window.location.href = `/game/${id}`
 }
 </script>
 

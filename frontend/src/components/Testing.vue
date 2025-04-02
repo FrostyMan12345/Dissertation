@@ -8,8 +8,9 @@ import DeveloperComment from './GamePage/DeveloperComment.vue'
 import GameInfo from './GamePage/GameInfo.vue'
 import CashCount from './CashCount.vue'
 import Login from '../views/Login.vue'
+import CatergoryFilter from './CatergoryFilter.vue'
 
-const test = GameInfo
+const test = CatergoryFilter
 </script>
 
 <style scoped></style>

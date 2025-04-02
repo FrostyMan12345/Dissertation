@@ -1,34 +1,39 @@
 <template>
   <h1>Reviews and Comments</h1>
-  <div v-for="played in playedBy" :key="index">
-    <div v-if="played?.review">
-      <!-- <h1>{{ played?.review.review_id }}</h1>
+  <div v-if="playedBy.some((played) => played?.review)">
+    <div v-for="played in playedBy" :key="index">
+      <div v-if="played?.review">
+        <!-- <h1>{{ played?.review.review_id }}</h1>
       <h1>{{ reacted }}</h1>
       <h1>{{ reacted[played?.review.review_id] == undefined }}</h1> -->
-      <!-- <h1>{{ played.user_id?.image }}</h1> -->
-      <!-- <h1>{{ played.user_id?._id }}</h1> -->
-      <Review
-        v-if="reacted[played?.review.review_id] != undefine"
-        :reviewInfo="played?.review"
-        :rating="played?.rating"
-        :reaction="reacted[played?.review.review_id]"
-        :reactedPrior="true"
-        :image="played.user_id?.image"
-        :userData="played"
-        class="article"
-      />
-      <Review
-        v-else
-        :reviewInfo="played?.review"
-        :rating="played?.rating"
-        :reaction="0"
-        :reactedPrior="false"
-        :image="played.user_id?.image"
-        :userData="played"
-        class="article"
-      />
-      <hr />
+        <!-- <h1>{{ played.user_id?.image }}</h1> -->
+        <!-- <h1>{{ played.user_id?._id }}</h1> -->
+        <Review
+          v-if="reacted[played?.review.review_id] != undefine"
+          :reviewInfo="played?.review"
+          :rating="played?.rating"
+          :reaction="reacted[played?.review.review_id]"
+          :reactedPrior="true"
+          :image="played.user_id?.image"
+          :userData="played"
+          class="article"
+        />
+        <Review
+          v-else
+          :reviewInfo="played?.review"
+          :rating="played?.rating"
+          :reaction="0"
+          :reactedPrior="false"
+          :image="played.user_id?.image"
+          :userData="played"
+          class="article"
+        />
+        <hr />
+      </div>
     </div>
+  </div>
+  <div v-else>
+    <h3>There are no reviews to display</h3>
   </div>
 </template>
 

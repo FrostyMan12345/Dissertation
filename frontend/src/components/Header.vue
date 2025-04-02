@@ -1,11 +1,13 @@
 <template>
   <header>
+    <button @click="goToMainPage"><h1>GameRecords</h1></button>
+
     <button @click="goToLoginPage">
       <img src="../assets/home_icon.png" alt="Home" class="header-button" />
     </button>
     <GameSearch />
     <UserSearch />
-    <p>{{ userState }}</p>
+    <!-- <p>{{ userState }}</p> -->
     <button v-if="userState.loggedIn" @click="goToProfilePage">
       <ProfilePicture :header="true" />
     </button>
@@ -18,8 +20,8 @@
 <script setup>
 import { ref } from 'vue'
 import router from '@/router'
-import GameSearch from './seacrh_bar/GameSearch.vue'
-import UserSearch from './seacrh_bar/UserSearch.vue'
+import GameSearch from './search_bar/GameSearch.vue'
+import UserSearch from './search_bar/UserSearch.vue'
 import ProfilePicture from './ProfilePicture.vue'
 import { userState } from '@/UserData'
 
@@ -30,6 +32,10 @@ function goToProfilePage() {
 
 function goToLoginPage() {
   router.push('/login')
+}
+
+function goToMainPage() {
+  router.push('/main')
 }
 </script>
 
@@ -60,7 +66,7 @@ button {
   padding: 5px 10px;
   border: none;
   background-color: #ffffff00;
-  color: #000000;
+  color: #0011ff;
   font-size: 16px;
 }
 </style>

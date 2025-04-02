@@ -53,24 +53,42 @@ mongoose
 const db = mongoose.connection;
 process.env.TWITCH_ACCESS = getCredentials();
 
+process.on("SIGINT", async () => {
+  await mongoose.connection.close();
+  console.log("MongoDB connection closed due to app termination");
+  process.exit(0);
+});
+
 app.get("/", (req, res) => {
   res.send("Express backend is running!");
 });
 
 app.get("/search/games", async (req, res) => {
-  const { query } = req.query;
+  const { query, limit, sort } = req.query;
   console.log(query);
+  console.log(limit);
+  console.log(sort);
   try {
-    const games = await Game.find({
-      name: { $regex: query, $options: "i" },
-    })
-      .lean()
-      .limit(10)
-      .sort({ name: 1 });
+    let games = [];
+    if (Number(sort) == 0) {
+      games = await Game.find({
+        name: { $regex: query, $options: "i" },
+      })
+        .lean()
+        .limit(Number(limit));
+    } else {
+      games = await Game.find({
+        name: { $regex: query, $options: "i" },
+      })
+        .lean()
+        .limit(Number(limit))
+        .sort({ name: Number(sort) });
+    }
     console.log(games);
     games.forEach((game) => {
       game = parseGameData(game);
     });
+
     res.json(games);
   } catch (error) {
     console.error(error);
@@ -643,9 +661,20 @@ app.get("/get/:userType/:username", async (req, res) => {
     schema = Developer;
   }
   try {
-    const userResponse = await schema.findOne({
-      username: username,
-    });
+    const userResponse = await schema
+      .findOne({
+        username: username,
+      })
+      .populate([
+        {
+          path: "games_played.game_id",
+          select: "genres themes keywords name platforms",
+        },
+        { path: "favourite_games.first", select: "name cover" },
+        { path: "favourite_games.second", select: "name cover" },
+        { path: "favourite_games.third", select: "name cover" },
+        // { path: "games_played.review" },
+      ]);
     console.log(userResponse);
     res.status(200).json({ message: "Get User Success", user: userResponse });
   } catch (error) {
@@ -800,9 +829,13 @@ app.post(
 
 app.get("/leaderboard/:sortBy", async (req, res) => {
   const sortBy = req.params.sortBy;
+  const filterData = req.query;
+  console.log(filterData);
+  const filters = parseFilters(filterData);
+  console.log(filters);
   console.log("Bazinga");
   try {
-    const response = await Game.find({})
+    const response = await Game.find(filters)
       .select(
         "name cover id average_hours_played average_rating average_times_played records_made"
       )
@@ -817,6 +850,40 @@ app.get("/leaderboard/:sortBy", async (req, res) => {
     res.status(500).json({ message: "Leaderboard Get Failure" });
   }
 });
+
+function parseFilters(filterData) {
+  console.log(filterData);
+  if (filterData["genre.name"]) {
+    // filterData["genre.name"] = { $in: filterData["genre.name"] };
+  }
+  if (filterData.average_hours_played) {
+    filterData.average_hours_played.$gte = Number(
+      filterData.average_hours_played.$gte
+    );
+    filterData.average_hours_played.$lte = Number(
+      filterData.average_hours_played.$lte
+    );
+  }
+  if (filterData.average_times_played) {
+    filterData.average_times_played.$gte = Number(
+      filterData.average_times_played.$gte
+    );
+    filterData.average_times_played.$lte = Number(
+      filterData.average_times_played.$lte
+    );
+  }
+  if (filterData.average_rating) {
+    filterData.average_rating.$gte = Number(filterData.average_rating.$gte);
+    filterData.average_rating.$lte = Number(filterData.average_rating.$lte);
+  }
+  if (filterData.records_made) {
+    filterData.records_made.$gte = Number(filterData.records_made.$gte);
+    filterData.records_made.$lte = Number(filterData.records_made.$lte);
+  }
+  console.log(filterData);
+
+  return filterData;
+}
 
 app.use("/Uploads", express.static("Uploads"));
 
@@ -1120,7 +1187,6 @@ function cosineSimilarity(vecA, vecB) {
 async function getGameRecommendations(username, schema) {
   try {
     console.log("Getting user recommendations");
-    // Fetch user and their games
     const user = await schema
       .findOne({ username: username })
       .populate([
@@ -1196,9 +1262,6 @@ async function getGameRecommendations(username, schema) {
       index = index + 1;
     }
 
-    console.log(userGenres);
-    console.log(userThemes);
-    console.log(userKeywords);
     console.log(Array.from(relevantGenres));
     console.log(Array.from(relevantThemes));
     console.log(Array.from(relevantKeywords));

@@ -106,16 +106,4 @@ hr {
   width: 100%;
   color: blue;
 }
-
-button {
-  color: rgb(0, 0, 0);
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0);
-  border: solid 1px blue;
-  padding: 5px;
-}
-
-button:hover {
-  background-color: rgb(0, 187, 255);
-}
 </style>

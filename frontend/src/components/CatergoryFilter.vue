@@ -1,52 +1,102 @@
 <template>
   <div class="criteria-container">
-    <form @submit.prevent="changeCriteria">
-      <h4>Ranking By:</h4>
-      <h5 id="pAnswer">{{ currentCriteria }}</h5>
-      <input type="radio" v-model="chosenCriteria" id="rating" name="criteria" value="Rating" />
-      <label for="rating" margin-left="10px">Rating</label><br />
-      <input
-        type="radio"
-        v-model="chosenCriteria"
-        id="most popular"
-        name="criteria"
-        value="Most Popular"
-      />
-      <label for="most popular" margin-left="10px">Most Popular</label><br />
-      <input
-        type="radio"
-        v-model="chosenCriteria"
-        id="play time"
-        name="criteria"
-        value="Play Time"
-      />
-      <label for="play time" margin-left="10px">Play Time</label><br />
-      <button type="submit">Change Criteria</button>
-    </form>
+    <h4>Advanced Filter:</h4>
+    <Multiselect
+      v-model="genreFilter"
+      mode="tags"
+      :options="genres.map((genre) => (genre = genre.name))"
+    />
+    <!-- <select style="gap: 10px" v-model="genreFilter" multiple>
+      <option disabled value="">Select one</option>
+      <option>None</option>
+      <option v-for="genre in genres">
+        {{ genre.name }}
+      </option>
+    </select> -->
+    <!-- {{ genreFilter }}no -->
+
+    <Slider id="ratings" v-model="ratingRange" :min="0" :max="5" :step="-1" :showTooltip="'drag'" />
+    <label for="ratings">Ratings: {{ ratingRange[0] }} - {{ ratingRange[1] }}</label>
+
+    <Slider
+      id="hoursPlayed"
+      v-model="hoursRange"
+      :min="0"
+      :max="maxHours"
+      :step="-1"
+      :showTooltip="'drag'"
+    />
+    <label for="hoursPlayed">Hours Played: {{ hoursRange[0] }} - {{ hoursRange[1] }}</label>
+
+    <Slider
+      id="revists"
+      v-model="revisitRange"
+      :min="0"
+      :max="maxRevisits"
+      :step="-1"
+      :showTooltip="'drag'"
+    />
+    <label for="revists">Revisits: {{ revisitRange[0] }} - {{ revisitRange[1] }}</label>
+
+    <Slider id="records" v-model="recordRange" :min="0" :max="maxRecords" :showTooltip="'drag'" />
+    <label for="records">Records: {{ recordRange[0] }} - {{ recordRange[1] }}</label>
+    <hr />
+    <button style="justify-self: center; align-self: centre" @click="setupAdvancedFilter">
+      Apply Filter
+    </button>
   </div>
 </template>
 
 <script setup>
 import { ref, defineEmits, defineProps, onMounted } from 'vue'
+import Slider from '@vueform/slider'
+import '@vueform/slider/themes/default.css'
+import genres from '@/GenreList'
+import Multiselect from '@vueform/multiselect'
+import '@vueform/multiselect/themes/default.css'
 
 const props = defineProps({
-  rankValue: String,
+  maxHours: { type: Number },
+  maxRecords: { type: Number },
+  maxRevisits: { type: Number },
 })
+const emit = defineEmits(['update-leaderboard'])
+const currentCriteria = ref(props.rankValue)
+const chosenCriteria = ref('')
+const ratingRange = ref([0, 5])
+const recordRange = ref([0, props.maxRecords])
+const hoursRange = ref([0, props.maxHours])
+const revisitRange = ref([0, props.maxRevisits])
+const genreFilter = ref([])
 
-var currentCriteria = ref(props.rankValue)
-var chosenCriteria = ref('')
-
-function changeCriteria() {
-  sessionStorage.setItem('rankingCriteria', chosenCriteria.value)
-  currentCriteria.value = chosenCriteria.value
-  emit('change-ranking', currentCriteria.value)
+function setupAdvancedFilter() {
+  const filterData = {}
+  if (genreFilter.value != []) {
+    filterData['genres.name'] = { $in: genreFilter.value }
+  }
+  if (!(hoursRange.value[0] == 0 && hoursRange.value[1] == props.maxHours)) {
+    filterData.average_hours_played = { $gte: hoursRange.value[0], $lte: hoursRange.value[1] }
+  }
+  if (!(recordRange.value[0] == 0 && recordRange.value[1] == props.maxRecords)) {
+    filterData.records_made = { $gte: recordRange.value[0], $lte: recordRange.value[1] }
+  }
+  if (!(ratingRange.value[0] == 0 && ratingRange.value[1] == 5)) {
+    filterData.average_rating = { $gte: ratingRange.value[0], $lte: ratingRange.value[1] }
+  }
+  if (!(revisitRange.value[0] == 0 && revisitRange.value[1] == props.maxRevisits)) {
+    filterData.average_times_played = { $gte: revisitRange.value[0], $lte: revisitRange.value[1] }
+  }
+  console.log(filterData)
+  if (Object.entries(filterData).length == 0) {
+    return
+  } else {
+    emit('update-leaderboard', filterData)
+  }
 }
 
-const emit = defineEmits(['change-ranking'])
-
-onMounted(() => {
-  chosenCriteria.value = currentCriteria.value
-})
+// onMounted(() => {
+//   chosenCriteria.value = currentCriteria.value
+// })
 </script>
 
 <style scoped>
@@ -56,16 +106,13 @@ onMounted(() => {
   width: max-content;
   height: max-content;
   padding: 10px 10px 10px 10px;
-}
-button {
-  color: rgb(0, 0, 0);
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0);
-  border: solid 1px blue;
-  padding: 5px;
+  display: flex;
+  flex-direction: column;
 }
 
-button:hover {
-  background-color: rgb(0, 187, 255);
+.horizontal-container {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
 }
 </style>

@@ -2,7 +2,7 @@
   <div class="criteria-container">
     <form @submit.prevent="changeCriteria">
       <h4>Ranking By:</h4>
-      <h5 id="pAnswer">{{ currentCriteria }}</h5>
+      <h5>{{ currentCriteria }}</h5>
       <input type="radio" v-model="chosenCriteria" id="rating" name="criteria" value="Rating" />
       <label for="rating" margin-left="10px">Rating</label><br />
       <input
@@ -57,6 +57,7 @@ onMounted(() => {
   height: max-content;
   padding: 10px 10px 10px 10px;
 }
+
 button {
   color: rgb(0, 0, 0);
   border-radius: 10px;

@@ -3,10 +3,6 @@
     <div class="modal-wrapper">
       <div class="modal-container" ref="target">
         <h1>Log your experience</h1>
-        <p>
-          <!-- {{ props?.review }}{{ props?.review.value.review_content }}  -->
-          {{ hoursPlayed }}{{ rating }} {{ timesPlayed }}
-        </p>
         <div class="horizontal-container">
           <h3>Rating:</h3>
           <vue3-star-ratings v-model="rating" />
@@ -31,7 +27,13 @@
           placeholder="Write your review"
         ></textarea>
         <div class="modal-footer">
-          <div>
+          <div v-if="makeReview && reviewContent.length < 25">
+            <p class="error-message">Review is too short</p>
+          </div>
+          <div v-else-if="makeReview && reviewContent.length > 250">
+            <p class="error-message">Review is too long</p>
+          </div>
+          <div v-else>
             <button v-if="!edit" @click.stop="logGameData">Submit</button>
             <button v-else @click.stop="editGameData">Submit</button>
           </div>
@@ -79,6 +81,11 @@ async function logGameData() {
     var response = {}
     console.log(userState)
     console.log(makeReview.value)
+    if (rating.value > 5) {
+      rating.value = 5
+    } else if (rating.value < 0) {
+      rating.value = 0
+    }
 
     if (review.value && makeReview.value) {
       response = await axios.post(`http://localhost:5000/game/${gameId}/record/make`, {
@@ -121,12 +128,13 @@ async function logGameData() {
 async function editGameData() {
   try {
     var response = {}
-    // console.log(props.review.value)
-    // console.log(reactions)
-    // console.log(props.review.value.reactions)
-    // console.log(props.review.value.review_id)
     console.log(props?.review?.value?.likes)
     console.log(props?.review)
+    if (rating.value > 5) {
+      rating.value = 5
+    } else if (rating.value < 0) {
+      rating.value = 0
+    }
 
     if (review.value && makeReview.value) {
       response = await axios.post(`http://localhost:5000/game/${gameId}/record/edit`, {

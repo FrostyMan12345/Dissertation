@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from dotenv import load_dotenv
-from pymongo import MongoClient
+from pymongo import MongoClient, IndexModel, ASCENDING, DESCENDING
 from itertools import islice
 
 from dataFunctions import *
@@ -73,6 +73,11 @@ def get_new_db(req: func.HttpRequest) -> func.HttpResponse:
         for slice in slices:
             gameCollection.insert_many(slice) # instering entire list at once does not work
             logging.info("30000 games added")
+        gameCollection.create_indexes([IndexModel([("average_hours_played", DESCENDING)]),
+    IndexModel([("average_rating", DESCENDING)]),
+    IndexModel([("average_times_played", DESCENDING)]),
+    IndexModel([("records_made", DESCENDING)]),
+    IndexModel([("name", ASCENDING)])])
     except Exception as e:
         logging.exception(f"Error occurred while inserting data: {e}")
         return func.HttpResponse(body=json.dumps({"msg": f"Failed to setup database: {e}"}),mimetype="application/json")

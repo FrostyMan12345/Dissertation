@@ -26,6 +26,7 @@
   border: 1px solid rgba(0, 38, 255, 0.448);
   color: black;
   box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+  border-radius: 0px !important;
 }
 
 .paginate-buttons:hover {
@@ -43,13 +44,13 @@
 }
 
 .back-button {
-  border-top-left-radius: 50%;
-  border-bottom-left-radius: 50%;
+  border-top-left-radius: 50% !important;
+  border-bottom-left-radius: 50% !important;
 }
 
 .next-button {
-  border-top-right-radius: 50%;
-  border-bottom-right-radius: 50%;
+  border-top-right-radius: 50% !important;
+  border-bottom-right-radius: 50% !important;
 }
 
 a,
@@ -58,6 +59,51 @@ a,
   color: hsla(160, 100%, 37%, 1);
   transition: 0.4s;
   padding: 3px;
+}
+
+table {
+  width: 40%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  border: 1px solid blue;
+  border-radius: 10px !important;
+}
+
+th,
+td {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid rgb(0, 0, 255) !important;
+  background-color: rgb(255, 255, 255);
+  color: blue;
+  position: sticky;
+}
+
+th {
+  color: white;
+  background-color: rgb(83, 83, 255);
+  border: 1px solid rgb(0, 0, 255) !important;
+}
+
+tr {
+  border: 1px solid white;
+}
+
+button {
+  color: rgb(0, 0, 0);
+  border-radius: 10px !important;
+  background-color: rgba(255, 255, 255, 0);
+  border: solid 1px blue;
+  padding: 5px;
+}
+
+button:hover {
+  background-color: rgb(0, 187, 255);
+}
+
+.error-message {
+  font-weight: bold;
+  color: red;
 }
 
 @media (hover: hover) {

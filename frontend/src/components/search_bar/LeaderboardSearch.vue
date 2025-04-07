@@ -4,25 +4,12 @@
       type="search"
       v-model="input"
       placeholder="Search for a game"
+      style="width: 217px"
       @focus="searchIsFocused = true"
       @blur="handleBlur"
       @input="search(input)"
       class="search-bar"
     />
-    <!-- <div v-if="searchIsFocused" class="search-results">
-      <div v-for="game in filteredGames" :key="game">
-        <button class="search-result" @click="goToGame(game.id)">
-          <div class="horizontal-container">
-            <img
-              :src="`https://images.igdb.com/igdb/image/upload/t_micro/${game.imageId}.jpg`"
-              alt="Game Cover"
-              class="game-image"
-            />
-            <p>{{ game.name }}</p>
-          </div>
-        </button>
-      </div>
-    </div> -->
     <p>Enter at least 3 character to search</p>
   </div>
 </template>

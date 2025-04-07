@@ -12,7 +12,9 @@ const path = require("path");
 const FileSystem = require("fs");
 const { resolve } = require("path");
 const multer = require("multer");
-const genrePop = require("./genrePop");
+const { genreVector } = require("./genreVector");
+const { themeVector } = require("./themeVector");
+const similarity = require("compute-cosine-similarity");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -187,6 +189,26 @@ app.post("/register/admin", async (req, res) => {
     return res.status(400).json({ message: credentialAccept });
   }
   return await registerAccount("Admin", username, password, res);
+});
+
+app.get("/login/developer", async (req, res) => {
+  const { username, password } = req.query;
+  console.log(
+    `Attempting login developer with Username: ${username} and Password: ${password}`
+  );
+  return await loginAccount("Admin", username, password, res);
+});
+
+app.post("/register/developer", async (req, res) => {
+  const { username, password } = req.body;
+  console.log(
+    `Attempting register developer with Username: ${username} and Password: ${password}`
+  );
+  const credentialAccept = validateCredentials(username, password);
+  if (credentialAccept != "Valid") {
+    return res.status(400).json({ message: credentialAccept });
+  }
+  return await registerAccount("Developer", username, password, res);
 });
 
 app.post("/game/:id/record/make", async (req, res) => {
@@ -852,10 +874,6 @@ app.get("/leaderboard/:sortBy", async (req, res) => {
 });
 
 function parseFilters(filterData) {
-  console.log(filterData);
-  if (filterData["genre.name"]) {
-    // filterData["genre.name"] = { $in: filterData["genre.name"] };
-  }
   if (filterData.average_hours_played) {
     filterData.average_hours_played.$gte = Number(
       filterData.average_hours_played.$gte
@@ -880,7 +898,6 @@ function parseFilters(filterData) {
     filterData.records_made.$gte = Number(filterData.records_made.$gte);
     filterData.records_made.$lte = Number(filterData.records_made.$lte);
   }
-  console.log(filterData);
 
   return filterData;
 }
@@ -1168,21 +1185,18 @@ function jaccardSimilarity(setA, setB) {
   return union.size === 0 ? 0 : intersection.size / union.size;
 }
 
-function cosineSimilarity(vecA, vecB) {
-  let dotProduct = 0,
-    magA = 0,
-    magB = 0;
-
-  for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
-    magA += vecA[i] ** 2;
-    magB += vecB[i] ** 2;
-  }
-
-  return magA === 0 || magB === 0
-    ? 0
-    : dotProduct / (Math.sqrt(magA) * Math.sqrt(magB));
+function confidenceScore(game) {
+  const rating = (game.average_rating || 0) / 5;
+  const records = game.records_made || 0;
+  const confidence = Math.log(1 + records) / 3;
+  return rating * confidence;
 }
+
+function cosineVector(gameVector, baseVector) {
+  return baseVector.map((v) => (gameVector.has(v) ? 1 : 0));
+}
+
+// function calculateUserPrefernceVector()
 
 async function getGameRecommendations(username, schema) {
   try {
@@ -1200,9 +1214,7 @@ async function getGameRecommendations(username, schema) {
       console.log("User not found");
       return [];
     }
-    console.log(user);
 
-    // Collect user game preferences
     let userGames = new Set();
     try {
       if (user.favourite_games.first)
@@ -1225,6 +1237,7 @@ async function getGameRecommendations(username, schema) {
     user.games_played.forEach((game) =>
       userGames.add(game.game_id._id.toString())
     );
+    console.log(user.games_played);
 
     let userGenres = new Set();
     let userThemes = new Set();
@@ -1232,39 +1245,90 @@ async function getGameRecommendations(username, schema) {
     let relevantGenres = new Set();
     let relevantThemes = new Set();
     let relevantKeywords = new Set();
-    let userRatings = [];
-    let userHoursPlayed = [];
-    let userTimesPlayed = [];
     let gameArray = Array.from(userGames);
+    let userThemeVector = new Array(themeVector.length).fill(0);
+    let userGenreVector = new Array(genreVector.length).fill(0);
+
     gameArray = gameArray.map((gameId) => new mongoose.Types.ObjectId(gameId));
     const gameDataArray = await Game.find({ _id: { $in: gameArray } });
-    let index = 0;
-    for (let gameData of gameDataArray) {
-      // console.log(gameData);
+
+    const totalHoursPlayed = user.games_played.reduce(
+      (total, game) => total + game.hours_played,
+      1
+    );
+    const totalRevisits = user.games_played.reduce(
+      (total, game) => total + game.times_played,
+      1
+    );
+    // console.log(gameDataArray);
+    // let index = 0;
+    for (let gameData of user.games_played) {
       if (gameData) {
-        gameData.genres.forEach((genre) => relevantGenres.add(genre));
-        gameData.themes.forEach((theme) => relevantThemes.add(theme));
-        gameData.keywords.forEach((keyword) => relevantKeywords.add(keyword));
-        gameData.genres.forEach((genre) => userGenres.add(genre.name));
-        gameData.themes.forEach((theme) => userThemes.add(theme.name));
-        gameData.keywords.forEach((keyword) => userKeywords.add(keyword.name));
-
-        let playedGame = user.games_played.find(
-          (g) => g.game_id._id.toString() === gameArray[index]
-        );
-        if (playedGame) {
-          console.log(`${gameData.game_id._id} has been played`);
-          userRatings.push(playedGame.rating || 0);
-          userHoursPlayed.push(playedGame.hours_played || 0);
-          userTimesPlayed.push(playedGame.times_played || 0);
+        let favouriteBias = 1;
+        // console.log(gameData);
+        if (
+          user.favouriteGames?.first?._id.toString() ==
+            gameData.game_id._id.toString() ||
+          user.favouriteGames?.third?._id.toString() ==
+            gameData.game_id._id.toString() ||
+          user.favouriteGames?.second?._id.toString() ==
+            gameData.game_id._id.toString()
+        ) {
+          favouriteBias = 5;
         }
-      }
-      index = index + 1;
-    }
+        const rating = gameData.rating || 0;
+        const playCount = gameData.times_played || 1;
+        const hoursPlayed = gameData.hours_played || 1;
 
-    console.log(Array.from(relevantGenres));
-    console.log(Array.from(relevantThemes));
-    console.log(Array.from(relevantKeywords));
+        gameData.game_id?.genres.forEach((genre) => {
+          const genreIndex = genreVector.indexOf(genre.name);
+          // console.log(genreVector, genre.name, genreVector.indexOf(genre.name));
+          if (genreIndex !== -1) {
+            userGenreVector[genreIndex] +=
+              (rating / 5) *
+              Math.sqrt(hoursPlayed) *
+              Math.log2(playCount) *
+              favouriteBias;
+          }
+        });
+
+        gameData.game_id?.themes.forEach((theme) => {
+          const themeIndex = themeVector.indexOf(theme.name);
+          // console.log(themeVector, theme.name, themeVector.indexOf(theme.name));
+          if (themeIndex !== -1) {
+            userThemeVector[themeIndex] +=
+              (rating / 5) *
+              Math.sqrt(hoursPlayed) *
+              Math.log2(playCount) *
+              favouriteBias;
+          }
+        });
+
+        gameData.game_id?.genres.forEach((genre) => {
+          relevantGenres.add(genre);
+          userGenres.add(genre.name);
+        });
+        gameData.game_id?.themes.forEach((theme) => {
+          relevantThemes.add(theme);
+          userThemes.add(theme.name);
+        });
+        gameData.game_id?.keywords.forEach((keyword) => {
+          relevantKeywords.add(keyword);
+          userKeywords.add(keyword.name);
+        });
+
+        // let playedGame = user.games_played.find(
+        //   (g) => g.game_id._id.toString() === gameArray[index]
+        // );
+        // if (playedGame) {
+        //   console.log(`${gameData.game_id._id} has been played`);
+        //   userRatings.push(playedGame.rating || 0);
+        //   userHoursPlayed.push(playedGame.hours_played || 0);
+        //   userTimesPlayed.push(playedGame.times_played || 0);
+        // }
+      }
+      // index = index + 1;
+    }
     let relevantGames = await Game.aggregate([
       {
         $match: {
@@ -1277,41 +1341,45 @@ async function getGameRecommendations(username, schema) {
       },
     ]);
     console.log(relevantGames.length);
+    console.log(userThemeVector, themeVector);
+    console.log(userGenreVector, genreVector);
     let recommendations = [];
-    let count = 0;
     for (let game of relevantGames) {
       if (userGames.has(game._id.toString())) continue;
-      let gameGenres = new Set((game.genres ?? []).map((g) => g.name));
-      let gameThemes = new Set((game.themes ?? []).map((t) => t.name));
+      // console.log(game);
+      // console.log(themeVector);
+      // console.log(genreVector);
+      // console.log(new Set(game?.genres.map((genre) => (genre = genre.name))));
+      let gameGenres = cosineVector(
+        new Set((game?.genres ?? []).map((genre) => genre.name)),
+        genreVector
+      );
+      let gameThemes = cosineVector(
+        new Set((game?.themes ?? []).map((theme) => theme.name)),
+        themeVector
+      );
+      // console.log(gameGenres, userGenreVector);
+      // console.log(gameThemes, userThemeVector);
+      let genreScore = similarity(userGenreVector, gameGenres);
+      let themeScore = similarity(userThemeVector, gameThemes);
+      // let gameGenres = new Set((game.genres ?? []).map((g) => g.name));
+      // let gameThemes = new Set((game.themes ?? []).map((t) => t.name));
       let gameKeywords = new Set((game.keywords ?? []).map((k) => k.name));
-
-      // console.log("Game Genres:", Array.from(gameGenres));
-      // console.log("Game Themes:", Array.from(gameThemes));
-      // console.log("Game Keywords:", Array.from(gameKeywords));
-      let genreSim = jaccardSimilarity(userGenres, gameGenres);
-      let themeSim = jaccardSimilarity(userThemes, gameThemes);
-      let keywordSim = jaccardSimilarity(userKeywords, gameKeywords);
-      let finalScore = 0;
-      if (game.playedBy && game.playedBy.length > 0) {
-        let gameRatings = game.played_by.map((g) => g.rating || 0);
-        // let gameHoursPlayed = game.played_by.map((g) => g.hours_played || 0);
-        // let gameTimesPlayed = game.played_by.map((g) => g.times_played || 0);
-
-        let ratingSim = cosineSimilarity(userRatings, gameRatings);
-        // let hoursSim = cosineSimilarity(userHoursPlayed, gameHoursPlayed);
-        // let timesSim = cosineSimilarity(userTimesPlayed, gameTimesPlayed);
-        let jaccardScore = 0.3 * genreSim + 0.3 * themeSim + 0.4 * keywordSim;
-        let cosineScore = ratingSim;
-
-        finalScore = 0.5 * jaccardScore + 0.5 * cosineScore;
-      } else {
-        let jaccardScore = 0.3 * genreSim + 0.3 * themeSim + 0.4 * keywordSim;
-        finalScore = jaccardScore;
-      }
-
+      // let genreSim = jaccardSimilarity(userGenres, gameGenres);
+      // let themeSim = jaccardSimilarity(userThemes, gameThemes);
+      let keywordScore = jaccardSimilarity(userKeywords, gameKeywords);
+      // finalScore =
+      //   0.7 * (0.35 * genreSim + 0.35 * themeSim + 0.3 * keywordSim) +
+      //   0.3 * confidenceScore(game);
+      let finalScore =
+        0.3 * genreScore +
+        0.3 * themeScore +
+        0.25 * keywordScore +
+        0.15 * confidenceScore(game);
       recommendations.push({ game, finalScore });
     }
     recommendations.sort((a, b) => b.finalScore - a.finalScore);
+    console.log(recommendations.length);
 
     return recommendations.slice(0, 50);
   } catch (error) {

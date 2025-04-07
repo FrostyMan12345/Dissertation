@@ -1,6 +1,6 @@
 <template>
-  <div style="width: 100%" class="horizontal-container">
-    <table v-if="!leaderboardLoading" width="100%">
+  <div class="horizontal-container">
+    <table v-if="!leaderboardLoading" width="80%">
       <thead>
         <tr>
           <th><h3>Ranking</h3></th>
@@ -278,7 +278,6 @@ async function getCompleteLeaderboard() {
       `http://localhost:5000/leaderboard/${urlCriteria}`,
       { params: {} },
     )
-    console.log(leaderboardResponse.data.leaderboard)
     leaderboard.value = leaderboardResponse.data.leaderboard
 
     maxHoursValue.value = leaderboard.value.reduce((max, game) => {
@@ -315,7 +314,6 @@ onMounted(() => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: 100%;
 }
 
 .shadowed {
@@ -328,15 +326,15 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   top: 20px;
-  left: 80%;
   background: white;
   padding: 10px;
   border-radius: 5px;
   z-index: 100;
-  width: 20%;
+  width: 217px;
   row-gap: 10px;
+  margin-left: 50px;
 }
 
 .loading-icon {

@@ -138,6 +138,10 @@ function goToMainPage() {
 </template>
 
 <style scoped>
+input {
+  margin: 10px;
+}
+
 hr {
   color: solid black;
   width: 75%;
@@ -164,16 +168,6 @@ hr {
   align-items: center;
 }
 
-input {
-  margin: 10px;
-  border: 1px solid black;
-  background-color: rgb(60, 60, 60);
-  color: white;
-  padding: 10px;
-  border-radius: 8px;
-  width: 50vw;
-}
-
 h3 {
   margin: 0;
   width: 120px;
@@ -188,9 +182,6 @@ h3 {
 }
 
 button {
-  color: white;
-  background-color: rgb(60, 60, 60);
-  border: 1px solid black;
   border-radius: 8px;
   align-items: center;
   justify-content: center;

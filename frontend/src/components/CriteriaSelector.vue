@@ -53,7 +53,7 @@ onMounted(() => {
 .criteria-container {
   border: 1px solid blue;
   background-color: aliceblue;
-  width: max-content;
+  width: 217px;
   height: max-content;
   padding: 10px 10px 10px 10px;
 }

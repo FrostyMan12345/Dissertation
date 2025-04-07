@@ -32,7 +32,10 @@
 
   --color-heading: var(--vt-c-text-light-1);
   --color-text: var(--vt-c-text-light-1);
-
+  --ms-tag-bg: #455aff;
+  --slider-connect-bg: #455aff;
+  --slider-tooltip-bg: #455aff;
+  --slider-handle-ring-color: #455aff;
   --section-gap: 160px;
 }
 

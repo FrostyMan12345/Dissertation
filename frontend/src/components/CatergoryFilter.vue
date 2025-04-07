@@ -1,9 +1,15 @@
 <template>
+  <!-- {{ advancedFilters }}
+  {{ ratingRange }}
+  {{ revisitRange }}
+  {{ recordsRange }}
+  {{ hoursRange }} -->
   <div class="criteria-container">
     <h4>Advanced Filter:</h4>
     <Multiselect
       v-model="genreFilter"
       mode="tags"
+      style="margin-bottom: 10px"
       :options="genres.map((genre) => (genre = genre.name))"
     />
     <!-- <select style="gap: 10px" v-model="genreFilter" multiple>
@@ -59,37 +65,67 @@ const props = defineProps({
   maxHours: { type: Number },
   maxRecords: { type: Number },
   maxRevisits: { type: Number },
+  initialFilters: {
+    type: {
+      genres: { type: [String], default: [] },
+      ratingRange: { type: [Number], defualt: [0, 5] },
+      revisitRange: [Number],
+      recordRange: [Number],
+      hoursRange: [Number],
+    },
+  },
 })
 const emit = defineEmits(['update-leaderboard'])
+const advancedFilters = ref(JSON.parse(sessionStorage.getItem('advancedFilters')) || {})
 const currentCriteria = ref(props.rankValue)
 const chosenCriteria = ref('')
-const ratingRange = ref([0, 5])
-const recordRange = ref([0, props.maxRecords])
-const hoursRange = ref([0, props.maxHours])
-const revisitRange = ref([0, props.maxRevisits])
-const genreFilter = ref([])
+console.log(advancedFilters)
+const ratingRange = ref([
+  advancedFilters.value?.ratingRange?.[0] ?? 0,
+  advancedFilters.value?.ratingRange?.[1] ?? 5,
+])
+const recordRange = ref([
+  advancedFilters.value?.recordRange?.[0] ?? 0,
+  advancedFilters.value?.recordRange?.[1] ?? props.maxRecords,
+])
+const hoursRange = ref([
+  advancedFilters.value?.hoursRange?.[0] ?? 0,
+  advancedFilters.value?.hoursRange?.[1] ?? props.maxHours,
+])
+const revisitRange = ref([
+  advancedFilters.value?.revisitRange?.[0] ?? 0,
+  advancedFilters.value?.revisitRange?.[1] ?? props.maxRevisits,
+])
+const genreFilter = ref(advancedFilters.value?.genres ?? [])
 
 function setupAdvancedFilter() {
   const filterData = {}
+  const toSave = {}
   if (genreFilter.value != []) {
     filterData['genres.name'] = { $in: genreFilter.value }
+    toSave.genres = genreFilter.value
   }
   if (!(hoursRange.value[0] == 0 && hoursRange.value[1] == props.maxHours)) {
     filterData.average_hours_played = { $gte: hoursRange.value[0], $lte: hoursRange.value[1] }
+    toSave.hoursRange = hoursRange.value
   }
   if (!(recordRange.value[0] == 0 && recordRange.value[1] == props.maxRecords)) {
     filterData.records_made = { $gte: recordRange.value[0], $lte: recordRange.value[1] }
+    toSave.recordRange = recordRange.value
   }
   if (!(ratingRange.value[0] == 0 && ratingRange.value[1] == 5)) {
     filterData.average_rating = { $gte: ratingRange.value[0], $lte: ratingRange.value[1] }
+    toSave.ratingRange = ratingRange.value
   }
   if (!(revisitRange.value[0] == 0 && revisitRange.value[1] == props.maxRevisits)) {
     filterData.average_times_played = { $gte: revisitRange.value[0], $lte: revisitRange.value[1] }
+    toSave.revisitRange = revisitRange.value
   }
-  console.log(filterData)
   if (Object.entries(filterData).length == 0) {
     return
   } else {
+    console.log(toSave)
+    sessionStorage.setItem('advancedFilters', JSON.stringify(toSave))
     emit('update-leaderboard', filterData)
   }
 }

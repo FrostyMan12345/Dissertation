@@ -19,7 +19,7 @@
         <td>
           <h3>
             <a
-              style="color: white; text-decoration: none; text-align: start"
+              style="color: blue; text-decoration: none; text-align: start"
               :href="`http://localhost:5173/game/${game.id}`"
               >{{ game.name }}</a
             >
@@ -82,7 +82,7 @@ async function getRecommendations() {
       `http://localhost:5000/get/${userType}/${username}/recommendations`,
     )
     console.log(userRecommendations.data)
-    reccomendations.value = userRecommendations.data.recommendations.map((rec) => rec.game)
+    recommendations.value = userRecommendations.data.recommendations.map((rec) => rec.game)
     score.value = userRecommendations.data.recommendations.map((rec) => rec.finalScore)
   } catch (error) {
     console.log(`Error getting recommendations ${error}`)

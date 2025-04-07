@@ -62,7 +62,7 @@ a,
 }
 
 table {
-  width: 40%;
+  width: 75%;
   border-collapse: collapse;
   margin-top: 20px;
   border: 1px solid blue;
@@ -104,6 +104,17 @@ button:hover {
 .error-message {
   font-weight: bold;
   color: red;
+}
+
+input[type='text'],
+input[type='search'],
+input[type='password'] {
+  border: 1px solid blue;
+  background-color: white;
+  color: black;
+  padding: 10px;
+  border-radius: 8px;
+  width: 50vw;
 }
 
 @media (hover: hover) {

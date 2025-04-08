@@ -4,6 +4,7 @@ const adminSchema = new mongoose.Schema(
   {
     username: { type: String },
     password: { type: String },
+    image: { type: String },
     favourite_games: {
       type: {
         first: {

@@ -4,6 +4,7 @@ const devSchema = new mongoose.Schema(
   {
     username: { type: String },
     password: { type: String },
+    image: { type: String },
     dev_comments: {
       developer_id: { type: String },
       comment: { type: String },

@@ -14,7 +14,7 @@
       <div>
         <button
           :disabled="isDisabled"
-          @click="likeReview"
+          @click="reviewReact(1)"
           :class="{ liked: isLiked }"
           class="like-dislike-btn"
         >
@@ -24,7 +24,7 @@
 
         <button
           :disabled="isDisabled"
-          @click="dislikeReview"
+          @click="reviewReact(-1)"
           :class="{ disliked: isDisliked }"
           class="like-dislike-btn"
         >
@@ -36,8 +36,9 @@
         <vue3-star-ratings v-model="rating" />
         <label>({{ rating }})</label>
       </div>
-      <label>reaction: {{ reaction }}</label>
-      <label>{{ hasReacted }}</label>
+      <!-- <label>reaction: {{ reaction }}</label>
+      <label>{{ hasReacted }}</label> -->
+      {{ userData }}
     </div>
   </div>
 </template>
@@ -46,7 +47,7 @@
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import { UserData, userState } from '@/UserData'
+import { userState } from '@/UserData'
 import ProfilePicture from '../ProfilePicture.vue'
 
 const props = defineProps({
@@ -74,6 +75,17 @@ const handleButton = () => {
   setTimeout(() => {
     isDisabled.value = false // Enable after 1 second
   }, 600)
+}
+
+function reviewReact(reaction) {
+  if (props.userData.user_id != userState.userId) {
+    console.log('Updating reaction: ', reaction)
+    if (reaction == 1) {
+      likeReview()
+    } else {
+      dislikeReview()
+    }
+  }
 }
 
 function likeReview() {

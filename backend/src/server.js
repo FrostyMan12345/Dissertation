@@ -2,9 +2,9 @@ require("dotenv").config({ path: "../../.env" });
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
-const Game = require("./mongoose_models/GameSchema");
 const User = require("./mongoose_models/UserSchema");
 const Admin = require("./mongoose_models/AdminSchema");
+const Game = require("./mongoose_models/GameSchema");
 const Developer = require("./mongoose_models/DeveloperSchema");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
@@ -132,18 +132,35 @@ app.get("/search/users", async (req, res) => {
 
 app.get("/game/:id/data", async (req, res) => {
   const { id } = req.params;
-  // console.log("Requested Game ID:", id);
   try {
-    var game = await Game.findOne({ id: id })
-      .populate("played_by.user_id")
-      .lean();
+    var game = await Game.findOne({ id: id }).lean();
+
+    console.log(
+      game.played_by.map((p) => ({
+        type: p.user_type,
+        rawId: p.user_id,
+        popStatus:
+          typeof p.user_id === "object" && p.user_id.username
+            ? "Populated"
+            : "Not populated",
+      }))
+    );
+    console.log(game);
+    // console.log("Raw game:", JSON.stringify(game, null, 2));
     // console.log(await User.findOne({ _id: game.played_by[0].user_id }));
     // console.log(await Admin.findOne({ _id: game.played_by[0].user_id }));
     if (!game) {
       return res.status(404).json({ message: "Game not found" });
     }
     game = parseGameData(game);
-    console.log("Game Data:", game);
+    // console.log("Game Data:", game);
+    for (let record of game.played_by) {
+      if (record.user_type == "User") {
+        record.user_id = await User.findById(record.user_id).select("image");
+      } else if (record.user_type == "Admin") {
+        record.user_id = await Admin.findById(record.user_id).select("image");
+      }
+    }
     res.json(game);
   } catch (error) {
     console.error("Database query error:", error);
@@ -335,7 +352,8 @@ app.post("/game/:id/record/edit", async (req, res) => {
   // console.log(userType);
   console.log(Object.keys(review).length === 0);
   try {
-    var playedBy = {};
+    let playedBy = {};
+    let userUpdate = {};
     if (Object.keys(review).length === 0) {
       console.log("Review Not Being added");
       playedBy = {
@@ -345,10 +363,17 @@ app.post("/game/:id/record/edit", async (req, res) => {
         hours_played: hoursPlayed,
         times_played: timesPlayed,
       };
+      userUpdate = {
+        game_id: new mongoose.Types.ObjectId(game._id),
+        rating: rating,
+        hours_played: hoursPlayed,
+        times_played: timesPlayed,
+      };
     } else {
       if (review.review_id === -1)
         review.review_id = new mongoose.Types.ObjectId();
-      console.log("Review Being added");
+
+      console.log("Review Being added: ", review.review_id);
       playedBy = {
         user_id: new mongoose.Types.ObjectId(userState.userId),
         user_type: userType,
@@ -357,22 +382,41 @@ app.post("/game/:id/record/edit", async (req, res) => {
         times_played: timesPlayed,
         review: review,
       };
+      userUpdate = {
+        game_id: new mongoose.Types.ObjectId(game._id),
+        rating: rating,
+        hours_played: hoursPlayed,
+        times_played: timesPlayed,
+        review: review.review_id,
+      };
     }
 
     const logResponse = await Game.findOneAndUpdate(
       {
         id: id,
-        "played_by.user_id": new mongoose.Types.ObjectId(userState.userId), // Find the correct game and user
+        "played_by.user_id": new mongoose.Types.ObjectId(userState.userId),
       },
       {
         $set: {
-          "played_by.$": playedBy, // Replace only the matched element
+          "played_by.$": playedBy,
+        },
+      },
+      { returnDocument: "after" }
+    );
+    const userResponse = await schema.findOneAndUpdate(
+      {
+        _id: new mongoose.Types.ObjectId(userState.userId),
+        "games_played.game_id": new mongoose.Types.ObjectId(game._id),
+      },
+      {
+        $set: {
+          "games_played.$": userUpdate,
         },
       },
       { returnDocument: "after" }
     );
 
-    console.log(logResponse);
+    console.log(userResponse, "bazingabfekivhb");
     res.status(200).json({ message: "Success", response: logResponse });
   } catch (error) {
     console.error("Database query error:", error);
@@ -631,11 +675,12 @@ app.post(
     const userId = req.params.id;
     const userType = req.params.userType;
     const fileName = req.file.filename;
-    const oldFile = req.body;
-    console.log(userId, userType, fileName);
+    const oldFile = req.body.oldFile;
+    console.log(userId, fileName, oldFile);
     var schema = User;
     if (userType === "Admin") {
       schema = Admin;
+      console.log("Admin");
     } else if (userType === "Developer") {
       schema = Developer;
     }
@@ -653,7 +698,8 @@ app.post(
         newImageCommand,
         { returnDocument: "after" }
       );
-      if (oldImage !== "") {
+      console.log(updateImageResponse);
+      if (oldFile !== "" && oldFile !== undefined && oldFile !== null) {
         const uploadsPath = path.join(__dirname, "uploads");
         FileSystem.unlink(path.join(uploadsPath, oldFile), (error) => {
           if (error) {
@@ -1249,23 +1295,18 @@ async function getGameRecommendations(username, schema) {
     let userThemeVector = new Array(themeVector.length).fill(0);
     let userGenreVector = new Array(genreVector.length).fill(0);
 
-    gameArray = gameArray.map((gameId) => new mongoose.Types.ObjectId(gameId));
-    const gameDataArray = await Game.find({ _id: { $in: gameArray } });
-
-    const totalHoursPlayed = user.games_played.reduce(
-      (total, game) => total + game.hours_played,
-      1
-    );
-    const totalRevisits = user.games_played.reduce(
-      (total, game) => total + game.times_played,
-      1
-    );
-    // console.log(gameDataArray);
-    // let index = 0;
+    let keywordVector = new Set();
+    user.games_played.forEach((game) => {
+      const keywordList = game.game_id.keywords || [];
+      keywordList.forEach((keyword) => {
+        keywordVector.add(keyword.name);
+      });
+    });
+    keywordVector = Array.from(keywordVector);
+    let userKeywordVector = new Array(keywordVector.length).fill(0);
     for (let gameData of user.games_played) {
       if (gameData) {
         let favouriteBias = 1;
-        // console.log(gameData);
         if (
           user.favouriteGames?.first?._id.toString() ==
             gameData.game_id._id.toString() ||
@@ -1282,7 +1323,6 @@ async function getGameRecommendations(username, schema) {
 
         gameData.game_id?.genres.forEach((genre) => {
           const genreIndex = genreVector.indexOf(genre.name);
-          // console.log(genreVector, genre.name, genreVector.indexOf(genre.name));
           if (genreIndex !== -1) {
             userGenreVector[genreIndex] +=
               (rating / 5) *
@@ -1294,9 +1334,19 @@ async function getGameRecommendations(username, schema) {
 
         gameData.game_id?.themes.forEach((theme) => {
           const themeIndex = themeVector.indexOf(theme.name);
-          // console.log(themeVector, theme.name, themeVector.indexOf(theme.name));
           if (themeIndex !== -1) {
             userThemeVector[themeIndex] +=
+              (rating / 5) *
+              Math.sqrt(hoursPlayed) *
+              Math.log2(playCount) *
+              favouriteBias;
+          }
+        });
+
+        gameData.game_id?.keywords.forEach((keyword) => {
+          const keywordIndex = keywordVector.indexOf(keyword.name);
+          if (keywordIndex !== -1) {
+            userKeywordVector[keywordIndex] +=
               (rating / 5) *
               Math.sqrt(hoursPlayed) *
               Math.log2(playCount) *
@@ -1316,18 +1366,7 @@ async function getGameRecommendations(username, schema) {
           relevantKeywords.add(keyword);
           userKeywords.add(keyword.name);
         });
-
-        // let playedGame = user.games_played.find(
-        //   (g) => g.game_id._id.toString() === gameArray[index]
-        // );
-        // if (playedGame) {
-        //   console.log(`${gameData.game_id._id} has been played`);
-        //   userRatings.push(playedGame.rating || 0);
-        //   userHoursPlayed.push(playedGame.hours_played || 0);
-        //   userTimesPlayed.push(playedGame.times_played || 0);
-        // }
       }
-      // index = index + 1;
     }
     let relevantGames = await Game.aggregate([
       {
@@ -1340,16 +1379,9 @@ async function getGameRecommendations(username, schema) {
         },
       },
     ]);
-    console.log(relevantGames.length);
-    console.log(userThemeVector, themeVector);
-    console.log(userGenreVector, genreVector);
     let recommendations = [];
     for (let game of relevantGames) {
       if (userGames.has(game._id.toString())) continue;
-      // console.log(game);
-      // console.log(themeVector);
-      // console.log(genreVector);
-      // console.log(new Set(game?.genres.map((genre) => (genre = genre.name))));
       let gameGenres = cosineVector(
         new Set((game?.genres ?? []).map((genre) => genre.name)),
         genreVector
@@ -1358,28 +1390,21 @@ async function getGameRecommendations(username, schema) {
         new Set((game?.themes ?? []).map((theme) => theme.name)),
         themeVector
       );
-      // console.log(gameGenres, userGenreVector);
-      // console.log(gameThemes, userThemeVector);
+      let gameKeywords = cosineVector(
+        new Set((game?.keywords ?? []).map((keyword) => keyword.name)),
+        keywordVector
+      );
       let genreScore = similarity(userGenreVector, gameGenres);
       let themeScore = similarity(userThemeVector, gameThemes);
-      // let gameGenres = new Set((game.genres ?? []).map((g) => g.name));
-      // let gameThemes = new Set((game.themes ?? []).map((t) => t.name));
-      let gameKeywords = new Set((game.keywords ?? []).map((k) => k.name));
-      // let genreSim = jaccardSimilarity(userGenres, gameGenres);
-      // let themeSim = jaccardSimilarity(userThemes, gameThemes);
-      let keywordScore = jaccardSimilarity(userKeywords, gameKeywords);
-      // finalScore =
-      //   0.7 * (0.35 * genreSim + 0.35 * themeSim + 0.3 * keywordSim) +
-      //   0.3 * confidenceScore(game);
+      let keywordScore = similarity(userKeywordVector, gameKeywords);
       let finalScore =
-        0.3 * genreScore +
-        0.3 * themeScore +
-        0.25 * keywordScore +
-        0.15 * confidenceScore(game);
+        0.35 * (genreScore || 0) +
+        0.35 * (themeScore || 0) +
+        0.2 * (keywordScore || 0) +
+        0.1 * confidenceScore(game);
       recommendations.push({ game, finalScore });
     }
     recommendations.sort((a, b) => b.finalScore - a.finalScore);
-    console.log(recommendations.length);
 
     return recommendations.slice(0, 50);
   } catch (error) {
@@ -1387,9 +1412,3 @@ async function getGameRecommendations(username, schema) {
     return [];
   }
 }
-
-// async function getUserRecommendations(userschema) {
-//   let recommendations = await getGameRecommendations("USER_ID_HERE", schema);
-//   console.log("Recommended Games:", recommendations);
-//   return recommendations;
-// }

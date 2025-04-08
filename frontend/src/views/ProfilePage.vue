@@ -13,7 +13,7 @@
     <h1>{{ username }}</h1>
   </div>
 
-  <div class="horizontal-container">
+  <div class="horizontal-container" style="align-items: flex-start; justify-content: flex-start">
     <div v-if="dataRetrieved" style="width: 50%">
       <div class="horizontal-container">
         <button @click="updateDataAndConfig(genreData, 'Genre', 'Games Played', false)">
@@ -39,8 +39,8 @@
         </button>
         <!-- <button @click="dataset = keywordData">Keywords</button> -->
       </div>
-      <!-- {{ dataset }} -->
-      <!-- {{ averageRating }} -->
+      <!-- {{ dataset }}
+      {{ averageRating }} -->
       <VueUiVerticalBar v-if="dataRetrieved" :dataset="dataset" :config="barConfig" />
       <RatingsDisplay v-if="dataRetrieved" :dataset="ratingData" :average="averageRating" />
     </div>
@@ -80,6 +80,7 @@ const genrePlayTimeData = ref([])
 const ratingData = ref([])
 const averageRating = ref(0)
 const dataRetrieved = ref(false)
+const updatingImage = ref(false)
 const dataset = ref([])
 const favouriteGames = ref({})
 const chartTitle = ref('Genres')
@@ -315,30 +316,36 @@ function fileSelect() {
 }
 
 async function uploadFile() {
+  updatingImage.value = true
   const formData = new FormData()
   formData.append('fileToUpload', fileInput.value)
+  formData.append('oldFile', userState.profilePicture)
+  console.log(userState.profilePicture)
   try {
     const response = await axios.post(
       `http://localhost:5000/user/${userState.userType}/${userState.userId}/update-image`,
       formData,
-      userState.image,
     )
     console.log(response.data.image)
     userState.setImage(response.data.image)
+    profileImage.value = response.data.image
   } catch (error) {
     console.log(`Failure ${error}`)
   }
+  updatingImage.value = false
 }
 
 async function getUserData() {
   try {
     console.log(userType, username)
     const response = await axios.get(`http://localhost:5000/get/${userType}/${username}`)
+    console.log('bvjuevbuhdsdbvefhv hfvbvljh fbeduv sa')
     console.log(response.data)
     userId.value = response.data.user._id
     profileImage.value = response.data.user.image
     gameRecords.value = response.data.user.games_played
     const favourites = response.data.user.favourite_games
+    console.log(response.data.user.image)
     parseFavouriteGames(favourites)
     parseGameAnalytics(gameRecords.value)
   } catch (error) {

@@ -9,7 +9,7 @@
         <!-- <h1>{{ played.user_id?.image }}</h1> -->
         <!-- <h1>{{ played.user_id?._id }}</h1> -->
         <Review
-          v-if="reacted[played?.review.review_id] != undefine"
+          v-if="reacted[played?.review.review_id] != undefined"
           :reviewInfo="played?.review"
           :rating="played?.rating"
           :reaction="reacted[played?.review.review_id]"

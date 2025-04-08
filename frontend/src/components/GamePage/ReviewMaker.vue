@@ -2,19 +2,24 @@
   <div v-if="modalActive" class="modal-mask">
     <div class="modal-wrapper">
       <div class="modal-container" ref="target">
-        <h1>Log your experience</h1>
+        <h1>Record your experience</h1>
         <div class="horizontal-container">
           <h3>Rating:</h3>
           <vue3-star-ratings v-model="rating" />
           <h3>({{ rating }})</h3>
         </div>
         <div class="horizontal-container">
-          <h3>Times Played:</h3>
-          <input placeholder="Number of playthroughs" v-model="timesPlayed" />
+          <h3 style="margin-right: 72px">Revisits:</h3>
+          <input
+            type="text"
+            style="width: 50px"
+            placeholder="Number of playthroughs"
+            v-model="timesPlayed"
+          />
         </div>
         <div class="horizontal-container">
           <h3>Hours Played:</h3>
-          <input placeholder="Hours Played" v-model="hoursPlayed" />
+          <input type="text" style="width: 50px" placeholder="Hours Played" v-model="hoursPlayed" />
         </div>
         <div class="horizontal-container">
           <h3 for="checkbox">Would you like to write a review?</h3>
@@ -185,6 +190,7 @@ async function editGameData() {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 5px;
 }
 .modal-container {
   width: 75%;
@@ -192,7 +198,7 @@ async function editGameData() {
   margin: 150px auto;
   padding: 20px 30px;
   background-color: #fff;
-  border-radius: 2px;
+  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.33);
 }
 </style>

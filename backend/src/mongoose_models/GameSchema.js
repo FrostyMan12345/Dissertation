@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const User = require("./UserSchema");
+const Admin = require("./AdminSchema");
 
 const gameSchema = new mongoose.Schema(
   {
@@ -54,8 +56,6 @@ const gameSchema = new mongoose.Schema(
   { collection: "Games" }
 );
 
-const User = require("./UserSchema");
-const Admin = require("./AdminSchema");
 const Game = mongoose.model("Game", gameSchema);
 
 module.exports = Game;

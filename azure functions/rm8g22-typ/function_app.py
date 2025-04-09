@@ -71,13 +71,8 @@ def get_new_db(req: func.HttpRequest) -> func.HttpResponse:
         it = iter(db)  
         slices = [list(islice(it, 30000)) for _ in range((len(db) + 30000 - 1) // 30000)]
         for slice in slices:
-            gameCollection.insert_many(slice) # instering entire list at once does not work
+            gameCollection.insert_many(slice) 
             logging.info("30000 games added")
-        gameCollection.create_indexes([IndexModel([("average_hours_played", DESCENDING)]),
-    IndexModel([("average_rating", DESCENDING)]),
-    IndexModel([("average_times_played", DESCENDING)]),
-    IndexModel([("records_made", DESCENDING)]),
-    IndexModel([("name", ASCENDING)])])
     except Exception as e:
         logging.exception(f"Error occurred while inserting data: {e}")
         return func.HttpResponse(body=json.dumps({"msg": f"Failed to setup database: {e}"}),mimetype="application/json")

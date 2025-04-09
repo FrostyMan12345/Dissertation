@@ -21,6 +21,25 @@ const gameSchema = new mongoose.Schema(
     average_times_played: { type: Number },
     average_hours_played: { type: Number },
     records_made: { type: Number },
+    comments: [
+      {
+        dev_id: { type: mongoose.Schema.Types.ObjectId, ref: "Developer" },
+        comment: { type: String },
+        likes: { type: Number },
+        dislikes: { type: Number },
+        comment_id: { type: mongoose.Schema.Types.ObjectId },
+        created: { type: Number },
+        edited: { type: Number, required: false },
+        reactions: {
+          type: [
+            {
+              user_id: { type: mongoose.Schema.Types.ObjectId },
+              reaction: { type: Number },
+            },
+          ],
+        },
+      },
+    ],
     played_by: [
       {
         user_id: { type: mongoose.Schema.Types.ObjectId, refPath: "user_type" },

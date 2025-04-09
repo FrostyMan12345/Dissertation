@@ -21,7 +21,7 @@
         value="Play Time"
       />
       <label for="play time" margin-left="10px">Play Time</label><br />
-      <button type="submit">Change Criteria</button>
+      <button class="normal-button" type="submit">Change Criteria</button>
     </form>
   </div>
 </template>
@@ -33,7 +33,7 @@ const props = defineProps({
   rankValue: String,
 })
 
-var currentCriteria = ref(props.rankValue)
+var currentCriteria = ref(props.rankValue || 'Rating')
 var chosenCriteria = ref('')
 
 function changeCriteria() {

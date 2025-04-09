@@ -17,7 +17,7 @@
       <tbody>
         <tr
           v-if="isUser"
-          v-for="(game, index) in Object.values(userState.favouriteGames).slice(0, 3) || []"
+          v-for="(game, index) in Object.values(favouriteGames).slice(0, 3) || []"
           :key="index"
         >
           <td>
@@ -28,8 +28,10 @@
           </td>
           <td>
             <img
+              v-if="game.name !== 'Not Selected'"
               :src="`https://images.igdb.com/igdb/image/upload/t_cover_small/${game?.cover?.image_id}.jpg`"
             />
+            <h6 v-else style="text-align: center">Unavailable</h6>
           </td>
         </tr>
         <tr

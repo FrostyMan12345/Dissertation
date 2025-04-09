@@ -7,20 +7,21 @@
           reviewInfo?.username
         }}</a>
       </h4>
-      <ProfilePicture :image="image" />
+      <ProfilePicture :small="true" :image="image" />
     </div>
     <p>{{ reviewInfo?.review_content }}</p>
     <div class="horizontal-container">
-      <div>
+      <div style="display: flex; align-items: center">
         <button
           :disabled="isDisabled"
           @click="reviewReact(1)"
           :class="{ liked: isLiked }"
           class="like-dislike-btn"
+          id="like-button"
         >
           <img src="../../assets/like_icon.png" alt="Like" class="like-dislike" />
         </button>
-        <label :class="{ liked: isLiked }"> Likes: {{ likes }} </label>
+        <label for="like-button" :class="{ liked: isLiked }"> Likes: {{ likes }} </label>
 
         <button
           :disabled="isDisabled"
@@ -31,24 +32,33 @@
           <img src="../../assets/dislike_icon.png" alt="Dislike" class="like-dislike" />
         </button>
         <label :class="{ disliked: isDisliked }"> Dislikes: {{ dislikes }} </label>
+        <div style="margin-left: 15px" class="horizontal-container">
+          <vue3-star-ratings v-model="rating" />
+          <label>({{ rating }})</label>
+        </div>
       </div>
-      <div class="horizontal-container">
-        <vue3-star-ratings v-model="rating" />
-        <label>({{ rating }})</label>
+      <div>
+        <p>
+          <span style="width: 60px; display: inline-block">Created: </span>
+          {{ dayjs(reviewInfo.created).format('DD/MM/YYYY HH:mm:ss') }}
+        </p>
+        <p v-if="reviewInfo.edited !== 0">
+          <span style="width: 60px; display: inline-block">Edited: </span>
+          {{ dayjs(reviewInfo.edited).format('DD/MM/YYYY HH:mm:ss') }}
+        </p>
       </div>
-      <!-- <label>reaction: {{ reaction }}</label>
-      <label>{{ hasReacted }}</label> -->
-      {{ userData }}
+      <!-- {{ userData }} -->
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { userState } from '@/UserData'
 import ProfilePicture from '../ProfilePicture.vue'
+import dayjs from 'dayjs'
 
 const props = defineProps({
   reviewInfo: Object,
@@ -71,14 +81,18 @@ const route = useRoute()
 const gameId = route.params.id
 const isDisabled = ref(false)
 const handleButton = () => {
-  isDisabled.value = true // Disable button
+  isDisabled.value = true
   setTimeout(() => {
-    isDisabled.value = false // Enable after 1 second
+    isDisabled.value = false
   }, 600)
 }
 
 function reviewReact(reaction) {
-  if (props.userData.user_id != userState.userId) {
+  if (
+    props.userData.user_id._id != userState.userId &&
+    !userState.developer &&
+    userState.loggedIn
+  ) {
     console.log('Updating reaction: ', reaction)
     if (reaction == 1) {
       likeReview()
@@ -121,14 +135,17 @@ function dislikeReview() {
 async function updateReaction(newReaction, newLikes, newDislikes) {
   try {
     console.log(newReaction)
-    const response = await axios.post(`http://localhost:5000/game/${gameId}/reaction/update`, {
-      reaction: newReaction,
-      newLikes,
-      newDislikes,
-      userState,
-      reactedPrior: hasReacted.value,
-      reviewId: props.reviewInfo.review_id,
-    })
+    const response = await axios.post(
+      `http://localhost:5000/game/${gameId}/review/reaction/update`,
+      {
+        reaction: newReaction,
+        newLikes,
+        newDislikes,
+        userState,
+        reactedPrior: hasReacted.value,
+        reviewId: props.reviewInfo.review_id,
+      },
+    )
     reaction.value = newReaction
     likes.value = newLikes
     dislikes.value = newDislikes
@@ -144,8 +161,7 @@ async function updateReaction(newReaction, newLikes, newDislikes) {
 .review {
   border: 1px solid blue;
   background-color: azure;
-  min-width: 50%;
-  max-width: 60%;
+  min-width: 75%;
   height: max-content;
   padding: 10px;
   border-radius: 10px;

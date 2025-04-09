@@ -120,19 +120,25 @@ function goToMainPage() {
       <input type="password" v-model="passwordConfirm" placeholder="Confirm Password" />
     </div>
 
-    <button v-if="login" @click="accountLogin(username, password)">Sign In</button>
-    <button v-else @click="accountRegister(username, password, passwordConfirm)">
+    <button class="normal-button" v-if="login" @click="accountLogin(username, password)">
+      Sign In
+    </button>
+    <button
+      class="normal-button"
+      v-else
+      @click="accountRegister(username, password, passwordConfirm)"
+    >
       Register New Account
     </button>
 
     <hr />
 
-    <button v-if="login" @click="toggleLogin">Register New Account</button>
-    <button v-else @click="toggleLogin">Sign In</button>
+    <button class="normal-button" v-if="login" @click="toggleLogin">Register New Account</button>
+    <button class="normal-button" v-else @click="toggleLogin">Sign In</button>
     <div class="horizontal-container" style="max-width: 25vw">
-      <button @click="changeLoginType('user')">User</button>
-      <button @click="changeLoginType('admin')">Admin</button>
-      <button @click="changeLoginType('developer')">Developer</button>
+      <button class="normal-button" @click="changeLoginType('user')">User</button>
+      <button class="normal-button" @click="changeLoginType('admin')">Admin</button>
+      <button class="normal-button" @click="changeLoginType('developer')">Developer</button>
     </div>
   </div>
 </template>

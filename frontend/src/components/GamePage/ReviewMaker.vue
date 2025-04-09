@@ -104,7 +104,7 @@ async function logGameData() {
           likes: 0,
           dislikes: 0,
           created: Date.now(),
-          edited: false,
+          edited: 0,
           review_id: '',
           reactions: [],
         },
@@ -142,6 +142,10 @@ async function editGameData() {
     }
 
     if (review.value && makeReview.value) {
+      let editTime = 0
+      if (props?.review?.value?.created !== undefined) {
+        editTime = Date.now()
+      }
       response = await axios.post(`http://localhost:5000/game/${gameId}/record/edit`, {
         userState,
         rating: rating.value,
@@ -152,8 +156,8 @@ async function editGameData() {
           review_content: reviewContent.value,
           likes: props?.review?.value?.likes || 0,
           dislikes: props?.review?.value?.dislikes || 0,
-          created: Date.now(),
-          edited: true,
+          created: props?.review?.value?.created || Date.now(),
+          edited: editTime,
           review_id: props?.review?.value?.review_id || -1,
           reactions: props?.review?.value?.reactions || [],
         },

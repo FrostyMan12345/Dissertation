@@ -13,26 +13,42 @@
     <h1>{{ username }}</h1>
   </div>
 
-  <div class="horizontal-container" style="align-items: flex-start; justify-content: flex-start">
-    <div v-if="dataRetrieved" style="width: 50%">
+  <div
+    v-if="userType !== 'Developer'"
+    class="horizontal-container"
+    style="align-items: flex-start; justify-content: flex-start"
+  >
+    <div
+      v-if="dataRetrieved"
+      style="width: 50%; display: flex; justify-content: center; flex-direction: column"
+    >
       <div class="horizontal-container">
-        <button @click="updateDataAndConfig(genreData, 'Genre', 'Games Played', false)">
+        <button
+          class="normal-button"
+          @click="updateDataAndConfig(genreData, 'Genre', 'Games Played', false)"
+        >
           Genre
         </button>
-        <button @click="updateDataAndConfig(themeData, 'Themes', 'Games Played', false)">
+        <button
+          class="normal-button"
+          @click="updateDataAndConfig(themeData, 'Themes', 'Games Played', false)"
+        >
           Theme
         </button>
         <button
+          class="normal-button"
           @click="updateDataAndConfig(genrePlayTimeData, 'Genres', 'Time Played (hours)', true)"
         >
           Genre Play Time
         </button>
         <button
+          class="normal-button"
           @click="updateDataAndConfig(themePlayTimeData, 'Themes', 'Time Played (hours)', true)"
         >
           Theme Play Time
         </button>
         <button
+          class="normal-button"
           @click="updateDataAndConfig(gameTimeData, 'All Games', 'Time Played (hours)', true)"
         >
           Game Play Time
@@ -41,15 +57,22 @@
       </div>
       <!-- {{ dataset }}
       {{ averageRating }} -->
-      <VueUiVerticalBar v-if="dataRetrieved" :dataset="dataset" :config="barConfig" />
-      <RatingsDisplay v-if="dataRetrieved" :dataset="ratingData" :average="averageRating" />
+      <!-- {{ dataset }} -->
+      <div v-if="dataset.length !== 0">
+        <VueUiVerticalBar v-if="dataRetrieved" :dataset="dataset" :config="barConfig" />
+        <RatingsDisplay v-if="dataRetrieved" :dataset="ratingData" :average="averageRating" />
+      </div>
+      <div v-else>
+        <h3>User has not made any records</h3>
+      </div>
     </div>
     <FavouriteGames
       :isUser="userState.username == username && userState.userType == userType"
       :favouriteGames="favouriteGames"
     />
-    <RecommendationsDisplay />
+    <RecommendationsDisplay v-if="username === userState.username" />
   </div>
+  <div v-else>Developer Account</div>
 </template>
 
 <script setup>
@@ -354,18 +377,22 @@ async function getUserData() {
 }
 
 function parseFavouriteGames(favourites) {
-  console.log(favourites)
-  if (favourites.first == null) {
-    favourites.first = { name: 'Not Selected', cover: null }
+  if (userType !== 'Developer') {
+    console.log(favourites)
+    if (favourites.first == null) {
+      favourites.first = { name: 'Not Selected', cover: null }
+    }
+    if (favourites.second == null) {
+      favourites.second = { name: 'Not Selected', cover: null }
+    }
+    if (favourites.third == null) {
+      favourites.third = { name: 'Not Selected', cover: null }
+    }
+    console.log('bazinga')
+    favouriteGames.value = favourites
+  } else {
+    favouriteGames.value = []
   }
-  if (favourites.second == null) {
-    favourites.second = { name: 'Not Selected', cover: null }
-  }
-  if (favourites.third == null) {
-    favourites.third = { name: 'Not Selected', cover: null }
-  }
-  console.log(favourites)
-  favouriteGames.value = favourites
   console.log(favouriteGames)
 }
 
@@ -378,59 +405,63 @@ function parseGameAnalytics(gameData) {
   let totalRating = 0
   const keywordCount = {}
   // console.log(gameData)
-  gameData.forEach((game) => {
-    game.game_id.genres.forEach((genre) => {
-      genreCount[genre.name] = (genreCount[genre.name] || 0) + 1
-      genrePlayTime[genre.name] = (genrePlayTime[genre.name] || 0) + game.hours_played
+  if (userType !== 'Developer') {
+    gameData.forEach((game) => {
+      game.game_id.genres.forEach((genre) => {
+        genreCount[genre.name] = (genreCount[genre.name] || 0) + 1
+        genrePlayTime[genre.name] = (genrePlayTime[genre.name] || 0) + game.hours_played
+      })
+      game.game_id.themes.forEach((theme) => {
+        themeCount[theme.name] = (themeCount[theme.name] || 0) + 1
+        themePlayTime[theme.name] = (themePlayTime[theme.name] || 0) + game.hours_played
+      })
+      game.game_id.keywords.forEach((keyword) => {
+        keywordCount[keyword.name] = (keywordCount[keyword.name] || 0) + 1
+      })
+      gameTimeData.value.push({ name: game.game_id.name, value: game.hours_played })
+      ratingCount[game.rating] = (ratingCount[game.rating] || 0) + 1
+      totalRating = totalRating + game.rating
     })
-    game.game_id.themes.forEach((theme) => {
-      themeCount[theme.name] = (themeCount[theme.name] || 0) + 1
-      themePlayTime[theme.name] = (themePlayTime[theme.name] || 0) + game.hours_played
-    })
-    game.game_id.keywords.forEach((keyword) => {
-      keywordCount[keyword.name] = (keywordCount[keyword.name] || 0) + 1
-    })
-    gameTimeData.value.push({ name: game.game_id.name, value: game.hours_played })
-    ratingCount[game.rating] = (ratingCount[game.rating] || 0) + 1
-    totalRating = totalRating + game.rating
-  })
-  averageRating.value = totalRating / gameData.length
+    averageRating.value = totalRating / gameData.length
 
-  // Object.entries(genreCount).forEach(([genre, count]) => {
-  //   genreData.value.push({ name: genre, values: [count] })
-  // })
-  // Object.entries(themeCount).forEach(([theme, count]) => {
-  //   themeData.value.push({ name: theme, values: [count] })
-  // })
-  // Object.entries(genrePlayTime).forEach(([genre, hours]) => {
-  //   genrePlayTimeData.value.push({ name: genre, values: [hours] })
-  // })
-  // Object.entries(themePlayTime).forEach(([theme, hours]) => {
-  //   themePlayTimeData.value.push({ name: theme, values: [hours] })
-  // })
-  Object.entries(genreCount).forEach(([genre, count]) => {
-    genreData.value.push({ name: genre, value: count })
-  })
-  Object.entries(themeCount).forEach(([theme, count]) => {
-    themeData.value.push({ name: theme, value: count })
-  })
-  Object.entries(genrePlayTime).forEach(([genre, hours]) => {
-    genrePlayTimeData.value.push({ name: genre, value: hours })
-  })
-  Object.entries(themePlayTime).forEach(([theme, hours]) => {
-    themePlayTimeData.value.push({ name: theme, value: hours })
-  })
-  // console.log(ratingCount)
-  for (var count = 0; count < 5; count = count + 0.1) {
-    // console.log(parseFloat(count.toFixed(1)))
-    ratingData.value.push({
-      period: `${count.toFixed(1)} Stars`,
-      value: ratingCount[parseFloat(count.toFixed(1))] || 0,
+    // Object.entries(genreCount).forEach(([genre, count]) => {
+    //   genreData.value.push({ name: genre, values: [count] })
+    // })
+    // Object.entries(themeCount).forEach(([theme, count]) => {
+    //   themeData.value.push({ name: theme, values: [count] })
+    // })
+    // Object.entries(genrePlayTime).forEach(([genre, hours]) => {
+    //   genrePlayTimeData.value.push({ name: genre, values: [hours] })
+    // })
+    // Object.entries(themePlayTime).forEach(([theme, hours]) => {
+    //   themePlayTimeData.value.push({ name: theme, values: [hours] })
+    // })
+    Object.entries(genreCount).forEach(([genre, count]) => {
+      genreData.value.push({ name: genre, value: count })
     })
+    Object.entries(themeCount).forEach(([theme, count]) => {
+      themeData.value.push({ name: theme, value: count })
+    })
+    Object.entries(genrePlayTime).forEach(([genre, hours]) => {
+      genrePlayTimeData.value.push({ name: genre, value: hours })
+    })
+    Object.entries(themePlayTime).forEach(([theme, hours]) => {
+      themePlayTimeData.value.push({ name: theme, value: hours })
+    })
+    // console.log(ratingCount)
+    for (var count = 0; count < 5; count = count + 0.1) {
+      // console.log(parseFloat(count.toFixed(1)))
+      ratingData.value.push({
+        period: `${count.toFixed(1)} Stars`,
+        value: ratingCount[parseFloat(count.toFixed(1))] || 0,
+      })
+    }
+    // console.log(ratingData.value)
+    Object.entries(ratingCount).forEach((rating, count) => {})
+    dataset.value = genreData.value
+  } else {
+    dataset.value = []
   }
-  // console.log(ratingData.value)
-  Object.entries(ratingCount).forEach((rating, count) => {})
-  dataset.value = genreData.value
   // console.log(dataset.value)
   dataRetrieved.value = true
 }

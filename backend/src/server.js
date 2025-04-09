@@ -133,18 +133,10 @@ app.get("/search/users", async (req, res) => {
 app.get("/game/:id/data", async (req, res) => {
   const { id } = req.params;
   try {
-    var game = await Game.findOne({ id: id }).lean();
+    var game = await Game.findOne({ id: id })
+      .populate({ path: "comments.dev_id", select: "username image" })
+      .lean();
 
-    console.log(
-      game.played_by.map((p) => ({
-        type: p.user_type,
-        rawId: p.user_id,
-        popStatus:
-          typeof p.user_id === "object" && p.user_id.username
-            ? "Populated"
-            : "Not populated",
-      }))
-    );
     console.log(game);
     // console.log("Raw game:", JSON.stringify(game, null, 2));
     // console.log(await User.findOne({ _id: game.played_by[0].user_id }));
@@ -213,7 +205,7 @@ app.get("/login/developer", async (req, res) => {
   console.log(
     `Attempting login developer with Username: ${username} and Password: ${password}`
   );
-  return await loginAccount("Admin", username, password, res);
+  return await loginAccount("Developer", username, password, res);
 });
 
 app.post("/register/developer", async (req, res) => {
@@ -424,7 +416,126 @@ app.post("/game/:id/record/edit", async (req, res) => {
   }
 });
 
-app.post("/game/:id/reaction/update", async (req, res) => {
+app.post("/game/:id/comment/make", async (req, res) => {
+  const id = req.params.id;
+  const { userState, comment = {}, game } = req.body;
+  if (!userState.developer) {
+    res.status(400).json({ message: "Non developer cannot create comments" });
+    return;
+  }
+  console.log(comment);
+  // console.log(userType);
+  console.log(Object.keys(comment).length === 0);
+  const commentId = new mongoose.Types.ObjectId();
+  try {
+    let commentPush = {};
+    let devPush = {};
+    comment.dev_id = new mongoose.Types.ObjectId(userState.userId);
+    comment.comment_id = commentId;
+    console.log(comment);
+    commentPush = {
+      $push: {
+        comments: comment,
+      },
+    };
+    devPush = {
+      $push: {
+        dev_comments: {
+          game_id: new mongoose.Types.ObjectId(game._id),
+          comment_id: commentId,
+        },
+      },
+    };
+    console.log(commentPush);
+    console.log(devPush);
+    const updateResponse = await Game.findOneAndUpdate(
+      { id: id },
+      commentPush,
+      {
+        returnDocument: "after",
+      }
+    );
+    const updateUserResponse = await Developer.findOneAndUpdate(
+      { _id: new mongoose.Types.ObjectId(userState.userId) },
+      devPush,
+      {
+        returnDocument: "after",
+      }
+    );
+    res.status(200).json({ message: "Success", response: updateResponse });
+  } catch (error) {
+    console.error("Database query error:", error);
+    res.status(500).json({ message: `Error updating game data ${error}` });
+  }
+});
+
+app.post("/game/:id/comment/edit", async (req, res) => {
+  const id = req.params.id;
+  const { userState, comment = {}, game } = req.body;
+  if (!userState.developer) {
+    res.status(400).json({ message: "Non developer cannot create comments" });
+    return;
+  }
+  console.log(comment);
+  console.log("fnihebvihebvebafb");
+  // console.log(userType);
+  try {
+    let commentPush = {};
+    // let devUpdate = {};
+    comment.dev_id = new mongoose.Types.ObjectId(userState.userId);
+    comment.comment_id = new mongoose.Types.ObjectId(comment.comment_id);
+    console.log(comment);
+    commentUpdate = {
+      dev_id: new mongoose.Types.ObjectId(userState.userId),
+      likes: comment.likes,
+      dislikes: comment.dislikes,
+      comment_id: comment.comment_id,
+      created: comment.created,
+      edited: comment.edited,
+      comment: comment.comment,
+      reactions: comment.reactions,
+    };
+    // devUpdate = {
+    //   game_id: comment.game_id,
+    //   comment_id: comment.comment_id
+    // };
+
+    // console.log(commentPush);
+    // console.log(devUpdate);
+
+    const updateResponse = await Game.findOneAndUpdate(
+      {
+        id: id,
+        "comments.dev_id": new mongoose.Types.ObjectId(userState.userId),
+      },
+      {
+        $set: {
+          "comments.$": comment,
+        },
+      },
+      { returnDocument: "after" }
+    );
+    // const userResponse = await Developer.findOneAndUpdate(
+    //   {
+    //     _id: new mongoose.Types.ObjectId(userState.userId),
+    //     "games_played.game_id": new mongoose.Types.ObjectId(game._id),
+    //   },
+    //   {
+    //     $set: {
+    //       "games_played.$": devUpdate,
+    //     },
+    //   },
+    //   { returnDocument: "after" }
+    // );
+
+    res.status(200).json({ message: "Success", response: updateResponse });
+  } catch (error) {
+    console.error("Database query error:", error);
+    res.status(500).json({ message: `Error updating game data ${error}` });
+  }
+});
+
+app.post("/game/:id/review/reaction/update", async (req, res) => {
   const id = req.params.id;
   const { reaction, newLikes, newDislikes, userState, reactedPrior, reviewId } =
     req.body;
@@ -438,9 +549,8 @@ app.post("/game/:id/reaction/update", async (req, res) => {
     reviewId
   );
   try {
-    var findResponse = [];
-    var reactionUpdate = {};
-    var reactionResponse = [];
+    let reactionUpdate = {};
+    let reactionResponse = [];
     if (reactedPrior) {
       reactionUpdate = {
         $set: {
@@ -450,14 +560,6 @@ app.post("/game/:id/reaction/update", async (req, res) => {
             reaction, // Target specific reaction
         },
       };
-      findResponse = await Game.findOne(
-        {
-          id: id,
-          "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId),
-        }
-
-        // "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId), // Match the review's ID
-      );
       reactionResponse = await Game.findOneAndUpdate(
         {
           id: id, // Match game ID
@@ -494,11 +596,6 @@ app.post("/game/:id/reaction/update", async (req, res) => {
           "played_by.$[played].review.dislikes": newDislikes,
         },
       };
-      findResponse = await Game.findOne({
-        id: id,
-
-        "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId),
-      });
       reactionResponse = await Game.findOneAndUpdate(
         {
           id: id, // Ensure you're matching the correct game
@@ -515,16 +612,111 @@ app.post("/game/:id/reaction/update", async (req, res) => {
         }
       );
     }
-    console.log(findResponse);
     console.log(reactionResponse);
     res.status(200).json({ message: "Reaction Update Success" });
   } catch (error) {
     console.error("Reaction update failed: ", error);
-    res.status(500).json({ message: "Failed to update reactions" });
+    res
+      .status(500)
+      .json({ message: "Failed to update reactions", error: error });
   }
 });
 
-app.get("/game/:id/reaction/get", async (req, res) => {
+app.post("/game/:id/comment/reaction/update", async (req, res) => {
+  const id = req.params.id;
+  const {
+    reaction,
+    newLikes,
+    newDislikes,
+    userState,
+    reactedPrior,
+    commentId,
+  } = req.body;
+  console.log(
+    id,
+    reaction,
+    newLikes,
+    newDislikes,
+    userState,
+    reactedPrior,
+    commentId
+  );
+  try {
+    let reactionUpdate = {};
+    let reactionResponse = [];
+    if (reactedPrior) {
+      reactionUpdate = {
+        $set: {
+          "comments.$[comment].likes": newLikes,
+          "comments.$[comment].dislikes": newDislikes,
+          "comments.$[comment].reactions.$[reactionItem].reaction": reaction, // Target specific reaction
+        },
+      };
+
+      reactionResponse = await Game.findOneAndUpdate(
+        {
+          id: id, // Match game ID
+          "comment.comment_id": new mongoose.Types.ObjectId(commentId), // Match review ID
+          "comment.reactions.user_id": new mongoose.Types.ObjectId(
+            userState.userId
+          ), // Match reaction's user ID
+        },
+        reactionUpdate,
+        {
+          arrayFilters: [
+            {
+              "comment.comment_id": new mongoose.Types.ObjectId(commentId), // Match review inside played_by
+            },
+            {
+              "reactionItem.user_id": new mongoose.Types.ObjectId(
+                userState.userId
+              ), // Match specific reaction inside reactions array
+            },
+          ],
+          returnDocument: "after",
+        }
+      );
+    } else {
+      reactionUpdate = {
+        $push: {
+          "comments.$[comment].reactions": {
+            user_id: new mongoose.Types.ObjectId(userState.userId),
+            reaction: reaction,
+          },
+        },
+        $set: {
+          "comments.$[comment].likes": newLikes,
+          "comments.$[comment].dislikes": newDislikes,
+        },
+      };
+
+      reactionResponse = await Game.findOneAndUpdate(
+        {
+          id: id, // Ensure you're matching the correct game
+          "comments.comment_id": new mongoose.Types.ObjectId(commentId), // Match the review's ID
+        },
+        reactionUpdate,
+        {
+          arrayFilters: [
+            {
+              "comment.comment_id": new mongoose.Types.ObjectId(commentId),
+            },
+          ],
+          returnDocument: "after", // To return the updated document
+        }
+      );
+    }
+    console.log(reactionResponse);
+    res.status(200).json({ message: "Reaction Update Success" });
+  } catch (error) {
+    console.error("Reaction update failed: ", error);
+    res
+      .status(500)
+      .json({ message: "Failed to update reactions", error: error });
+  }
+});
+
+app.get("/game/:id/record/reaction/get", async (req, res) => {
   const id = req.params.id;
   const { userId } = req.query;
   try {
@@ -565,6 +757,51 @@ app.get("/game/:id/reaction/get", async (req, res) => {
     res.status(200).json({
       message: "Reaction Get Success",
       reviews: reviewsReacted,
+    });
+  } catch (error) {
+    console.error("Reaction get failed: ", error);
+    res.status(500).json({ message: "Failed to get reactions" });
+  }
+});
+
+app.get("/game/:id/comment/reaction/get", async (req, res) => {
+  const id = req.params.id;
+  const { userId } = req.query;
+  try {
+    const reactionResponse = await Game.find({
+      id: id,
+      "comments.reactions.user_id": new mongoose.Types.ObjectId(userId),
+    }).select("comments");
+    console.log(reactionResponse);
+    // console.log(reviews);
+    var commentsReacted = {};
+    if (reactionResponse) {
+      reactionResponse.forEach((comment) => {
+        if (comment != undefined) {
+          reactions = comment.reactions;
+          // console.log(review);
+          // console.log(reactions);
+          if (reactions) {
+            reactions.forEach((reaction) => {
+              if (
+                reaction.user_id.equals(new mongoose.Types.ObjectId(userId))
+              ) {
+                // reviewsReacted.push({
+                //   review_id: reviewData.review_id,
+                //   reaction: reaction.reaction,
+                // });
+                commentsReacted[comment.comment_id] = reaction.reaction;
+                // console.log(reviewsReacted);
+              }
+            });
+          }
+        }
+      });
+    }
+    // console.log(reviewsReacted);
+    res.status(200).json({
+      message: "Reaction Get Success",
+      comments: commentsReacted,
     });
   } catch (error) {
     console.error("Reaction get failed: ", error);
@@ -629,6 +866,63 @@ app.get("/game/:id/record/get", async (req, res) => {
   }
 });
 
+app.get("/game/:id/comment/check", async (req, res) => {
+  const id = req.params.id;
+  const { userId } = req.query;
+  // console.log(id, userId);
+  try {
+    const loggedResponse = await Game.find({
+      id: id,
+      "comments.dev_id": new mongoose.Types.ObjectId(userId),
+    });
+    console.log(loggedResponse);
+    if (loggedResponse.length === 0) {
+      res.status(200).json({
+        message: "Log check Success",
+        comment: loggedResponse,
+        logged: false,
+      });
+    } else {
+      res.status(200).json({
+        message: "Log check Success",
+        comment: loggedResponse,
+        logged: true,
+      });
+    }
+  } catch (error) {
+    console.error("Comment check failed: ", error);
+    res.status(500).json({ message: "Failed to comment check" });
+  }
+});
+
+app.get("/game/:id/comment/get", async (req, res) => {
+  const id = req.params.id;
+  const { userId } = req.query;
+  try {
+    const logResponse = await Game.find(
+      {
+        id: id,
+        "comments.dev_id": new mongoose.Types.ObjectId(userId),
+      },
+      {
+        comments: {
+          $elemMatch: { dev_id: new mongoose.Types.ObjectId(userId) },
+        },
+      }
+    );
+    console.log(`Retrieved Comment: ${logResponse}`);
+    // console.log(logResponse[0].played_by);
+
+    res.status(200).json({
+      message: "Comment Get Success",
+      logData: logResponse,
+    });
+  } catch (error) {
+    console.error("Comment Get failed: ", error);
+    res.status(500).json({ message: "Failed to get comment or no comment" });
+  }
+});
+
 app.post("/game/:id/update", async (req, res) => {
   const id = req.params.id;
   try {
@@ -680,7 +974,6 @@ app.post(
     var schema = User;
     if (userType === "Admin") {
       schema = Admin;
-      console.log("Admin");
     } else if (userType === "Developer") {
       schema = Developer;
     }
@@ -729,20 +1022,36 @@ app.get("/get/:userType/:username", async (req, res) => {
     schema = Developer;
   }
   try {
-    const userResponse = await schema
-      .findOne({
+    let userResponse = {};
+    if (userType === "Developer") {
+      userResponse = await Developer.findOne({
         username: username,
-      })
-      .populate([
+      }).populate([
         {
-          path: "games_played.game_id",
-          select: "genres themes keywords name platforms",
+          path: "dev_comments.game_id",
+          select: "genres themes keywords name platforms cover",
         },
-        { path: "favourite_games.first", select: "name cover" },
-        { path: "favourite_games.second", select: "name cover" },
-        { path: "favourite_games.third", select: "name cover" },
-        // { path: "games_played.review" },
+        //   { path: "favourite_games.first", select: "name cover" },
+        //   { path: "favourite_games.second", select: "name cover" },
+        //   { path: "favourite_games.third", select: "name cover" },
+        //   // { path: "games_played.review" },
       ]);
+    } else {
+      userResponse = await schema
+        .findOne({
+          username: username,
+        })
+        .populate([
+          {
+            path: "games_played.game_id",
+            select: "genres themes keywords name platforms",
+          },
+          { path: "favourite_games.first", select: "name cover" },
+          { path: "favourite_games.second", select: "name cover" },
+          { path: "favourite_games.third", select: "name cover" },
+          // { path: "games_played.review" },
+        ]);
+    }
     console.log(userResponse);
     res.status(200).json({ message: "Get User Success", user: userResponse });
   } catch (error) {
@@ -760,7 +1069,7 @@ app.get("/get/:userType/:username/recommendations", async (req, res) => {
   } else if (userType === "Developer") {
     res
       .status(404)
-      .json({ message: `Developer cannot recieve recommendations: ${error}` });
+      .json({ message: `Developer cannot recieve recommendations` });
     return;
   }
   try {
@@ -919,6 +1228,12 @@ app.get("/leaderboard/:sortBy", async (req, res) => {
   }
 });
 
+app.use("/uploads", express.static("uploads"));
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
 function parseFilters(filterData) {
   if (filterData.average_hours_played) {
     filterData.average_hours_played.$gte = Number(
@@ -947,12 +1262,6 @@ function parseFilters(filterData) {
 
   return filterData;
 }
-
-app.use("/Uploads", express.static("Uploads"));
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
 
 async function registerAccount(type, username, password, res) {
   if (type != "Users" && type != "Admin" && type != "Developer") {
@@ -1001,8 +1310,8 @@ async function loginAccount(type, username, password, res) {
   }
   try {
     const passwordHash = getHash(password);
-    var response = {};
-    if (schema === Developer) {
+    let response = {};
+    if (type === "Developer") {
       response = await schema.findOne({
         username: username,
         password: passwordHash,
@@ -1285,6 +1594,7 @@ async function getGameRecommendations(username, schema) {
     );
     console.log(user.games_played);
 
+    console.log(userGames);
     let userGenres = new Set();
     let userThemes = new Set();
     let userKeywords = new Set();
@@ -1305,7 +1615,9 @@ async function getGameRecommendations(username, schema) {
     keywordVector = Array.from(keywordVector);
     let userKeywordVector = new Array(keywordVector.length).fill(0);
     for (let gameData of user.games_played) {
+      console.log(gameData);
       if (gameData) {
+        console.log("indeed");
         let favouriteBias = 1;
         if (
           user.favouriteGames?.first?._id.toString() ==
@@ -1320,14 +1632,15 @@ async function getGameRecommendations(username, schema) {
         const rating = gameData.rating || 0;
         const playCount = gameData.times_played || 1;
         const hoursPlayed = gameData.hours_played || 1;
-
+        console.log(rating, playCount, hoursPlayed, favouriteBias);
         gameData.game_id?.genres.forEach((genre) => {
           const genreIndex = genreVector.indexOf(genre.name);
+          console.log(genreIndex);
           if (genreIndex !== -1) {
             userGenreVector[genreIndex] +=
               (rating / 5) *
               Math.sqrt(hoursPlayed) *
-              Math.log2(playCount) *
+              (Math.log2(playCount) + 1) *
               favouriteBias;
           }
         });
@@ -1338,7 +1651,7 @@ async function getGameRecommendations(username, schema) {
             userThemeVector[themeIndex] +=
               (rating / 5) *
               Math.sqrt(hoursPlayed) *
-              Math.log2(playCount) *
+              (Math.log2(playCount) + 1) *
               favouriteBias;
           }
         });
@@ -1349,7 +1662,7 @@ async function getGameRecommendations(username, schema) {
             userKeywordVector[keywordIndex] +=
               (rating / 5) *
               Math.sqrt(hoursPlayed) *
-              Math.log2(playCount) *
+              (Math.log2(playCount) + 1) *
               favouriteBias;
           }
         });
@@ -1368,6 +1681,7 @@ async function getGameRecommendations(username, schema) {
         });
       }
     }
+    // console.log(genreVector, themeVector, keywordVector);
     let relevantGames = await Game.aggregate([
       {
         $match: {
@@ -1380,6 +1694,25 @@ async function getGameRecommendations(username, schema) {
       },
     ]);
     let recommendations = [];
+    // console.log(relevantGames.length);
+    // console.log(
+    //   userGenreVector,
+    //   genreVector,
+    //   userGenreVector.length,
+    //   genreVector.length
+    // );
+    // console.log(
+    //   userThemeVector,
+    //   themeVector,
+    //   userThemeVector.length,
+    //   themeVector.length
+    // );
+    // console.log(
+    //   userKeywordVector,
+    //   keywordVector,
+    //   userKeywordVector.length,
+    //   keywordVector.length
+    // );
     for (let game of relevantGames) {
       if (userGames.has(game._id.toString())) continue;
       let gameGenres = cosineVector(
@@ -1397,6 +1730,7 @@ async function getGameRecommendations(username, schema) {
       let genreScore = similarity(userGenreVector, gameGenres);
       let themeScore = similarity(userThemeVector, gameThemes);
       let keywordScore = similarity(userKeywordVector, gameKeywords);
+      // console.log(genreScore, gameGenres);
       let finalScore =
         0.35 * (genreScore || 0) +
         0.35 * (themeScore || 0) +

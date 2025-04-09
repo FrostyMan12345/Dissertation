@@ -1,5 +1,25 @@
 <template>
-  <h1>Reviews and Comments</h1>
+  <h3 v-if="!playedBy.some((played) => played?.review) && devComments.length === 0">
+    There are no reviews or comments
+  </h3>
+  <h1 v-else>Reviews and Comments</h1>
+  <div v-for="comment in devComments">
+    <DeveloperComment
+      v-if="commentsReacted[comment?.comment_id] != undefined"
+      :commentInfo="comment"
+      :reaction="reviewsReacted[comment?.comment_id]"
+      :reactedPrior="true"
+      :image="comment.dev_id?.image"
+    />
+    <DeveloperComment
+      v-else
+      :commentInfo="comment"
+      :reaction="0"
+      :reactedPrior="false"
+      :image="comment.dev_id?.image"
+    />
+  </div>
+
   <div v-if="playedBy.some((played) => played?.review)">
     <div v-for="played in playedBy" :key="index">
       <div v-if="played?.review">
@@ -9,10 +29,10 @@
         <!-- <h1>{{ played.user_id?.image }}</h1> -->
         <!-- <h1>{{ played.user_id?._id }}</h1> -->
         <Review
-          v-if="reacted[played?.review.review_id] != undefined"
+          v-if="reviewsReacted[played?.review.review_id] != undefined"
           :reviewInfo="played?.review"
           :rating="played?.rating"
-          :reaction="reacted[played?.review.review_id]"
+          :reaction="reviewsReacted[played?.review.review_id]"
           :reactedPrior="true"
           :image="played.user_id?.image"
           :userData="played"
@@ -32,9 +52,6 @@
       </div>
     </div>
   </div>
-  <div v-else>
-    <h3>There are no reviews to display</h3>
-  </div>
 </template>
 
 <script setup>
@@ -43,6 +60,7 @@ import { onMounted, reactive } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
 import Review from './Review.vue'
+import DeveloperComment from './DeveloperComment.vue'
 
 const props = defineProps({
   playedBy: Array,
@@ -51,7 +69,8 @@ const props = defineProps({
 
 const route = useRoute()
 const gameId = route.params.id
-const reacted = reactive({})
+const reviewsReacted = reactive({})
+const commentsReacted = reactive({})
 
 async function getReacted() {
   if (!userState.loggedIn) {
@@ -59,13 +78,25 @@ async function getReacted() {
   }
   console.log(`UserId: ${userState.userId}`)
   try {
-    const response = await axios.get(`http://localhost:5000/game/${gameId}/reaction/get`, {
-      params: {
-        userId: userState.userId,
+    const reviewResponse = await axios.get(
+      `http://localhost:5000/game/${gameId}/record/reaction/get`,
+      {
+        params: {
+          userId: userState.userId,
+        },
       },
-    })
-    Object.assign(reacted, response.data.reviews)
-    console.log(reacted)
+    )
+    const commentResponse = await axios.get(
+      `http://localhost:5000/game/${gameId}/comment/reaction/get`,
+      {
+        params: {
+          userId: userState.userId,
+        },
+      },
+    )
+    Object.assign(reviewsReacted, reviewResponse.data.reviews)
+    Object.assign(commentsReacted, commentResponse.data.comments)
+    console.log(commentsReacted)
   } catch (error) {
     console.error('Reaction Get Failure ', error)
   }

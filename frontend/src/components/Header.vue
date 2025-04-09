@@ -43,13 +43,14 @@ function goToMainPage() {
 header {
   display: flex;
   width: 100%;
-  background-color: #21adcd00;
-  border: 1px solid blue;
+  background-color: #21adcd2c;
+  border-bottom: 1px solid blue;
   padding: 10px 20px;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
   flex-direction: row;
+  box-shadow: black;
 }
 
 h3 {

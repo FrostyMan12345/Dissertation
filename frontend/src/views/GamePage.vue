@@ -8,6 +8,7 @@ import ReviewsSection from '@/components/GamePage/ReviewsSection.vue'
 import { userState } from '@/UserData'
 import ReviewMaker from '@/components/GamePage/ReviewMaker.vue'
 import FavouriteChanger from '@/components/GamePage/FavouriteChanger.vue'
+import CommentMaker from '@/components/GamePage/CommentMaker.vue'
 
 const game = reactive(new Game())
 const imageID = ref(0)
@@ -28,22 +29,44 @@ async function getGameData() {
     const gameInfo = response.data
     Object.assign(game, Game.gameFromObject(gameInfo))
     console.log(game)
-    const hasLoggedResponse = await axios.get(`http://localhost:5000/game/${gameId}/record/check`, {
-      params: {
-        userId: userState.userId,
-      },
-    })
-    const logGet = await axios.get(`http://localhost:5000/game/${gameId}/record/get`, {
-      params: {
-        userId: userState.userId,
-      },
-    })
+    if (!userState.developer && userState.loggedIn) {
+      const hasLoggedResponse = await axios.get(
+        `http://localhost:5000/game/${gameId}/record/check`,
+        {
+          params: {
+            userId: userState.userId,
+          },
+        },
+      )
+      const logGet = await axios.get(`http://localhost:5000/game/${gameId}/record/get`, {
+        params: {
+          userId: userState.userId,
+        },
+      })
+      loggedReview.value = logGet.data.logData[0]?.review
+      loggedHoursPlayed.value = logGet.data.logData[0].hours_played
+      loggedTimesPlayed.value = logGet.data.logData[0].times_played
+      loggedRating.value = logGet.data.logData[0].rating
+      hasLogged.value = hasLoggedResponse.data.logged
+    } else if (userState.developer && userState.loggedIn) {
+      const hasLoggedResponse = await axios.get(
+        `http://localhost:5000/game/${gameId}/comment/check`,
+        {
+          params: {
+            userId: userState.userId,
+          },
+        },
+      )
+      const logGet = await axios.get(`http://localhost:5000/game/${gameId}/comment/get`, {
+        params: {
+          userId: userState.userId,
+        },
+      })
+      console.log(logGet)
+      loggedReview.value = logGet.data.logData[0]
+      hasLogged.value = hasLoggedResponse.data.logged
+    }
     // console.log(logGet.data.logData[0])
-    loggedReview.value = logGet.data.logData[0]?.review
-    loggedHoursPlayed.value = logGet.data.logData[0].hours_played
-    loggedTimesPlayed.value = logGet.data.logData[0].times_played
-    loggedRating.value = logGet.data.logData[0].rating
-    hasLogged.value = hasLoggedResponse.data.logged
   } catch (error) {
     console.error('Error fetching game and log data:', error)
     hasLogged.value = false
@@ -88,15 +111,22 @@ onMounted(() => {
     @change-favourite="activateFavouriteModal"
   />
 
-  <ReviewsSection :playedBy="game.playedBy" :dev-comments="game?.comments" />
   <ReviewMaker
-    v-if="hasLogged !== null"
+    v-if="hasLogged !== null && !userState.developer"
     :modalActive="recordPopup"
     :edit="editing"
     :review="loggedReview"
     :rating="loggedRating"
     :timesPlayed="loggedTimesPlayed"
     :hoursPlayed="loggedHoursPlayed"
+    :game="game"
+    @modal-exit="closeModal"
+  />
+  <CommentMaker
+    v-else-if="hasLogged !== null && userState.developer"
+    :modalActive="recordPopup"
+    :edit="editing"
+    :comment="loggedReview"
     :game="game"
     @modal-exit="closeModal"
   />

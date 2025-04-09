@@ -92,14 +92,16 @@ async function changeFavourite(index) {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 5px;
 }
+
 .modal-container {
   width: 75%;
   height: 50%;
   margin: 150px auto;
   padding: 20px 30px;
   background-color: #fff;
-  border-radius: 2px;
+  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.33);
 }
 
@@ -109,9 +111,6 @@ async function changeFavourite(index) {
   align-items: flex-start;
   flex-direction: column;
   gap: 20px;
-}
-
-.favourite-changer {
 }
 
 button {

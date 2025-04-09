@@ -47,7 +47,11 @@
     <Slider id="records" v-model="recordRange" :min="0" :max="maxRecords" :showTooltip="'drag'" />
     <label for="records">Records: {{ recordRange[0] }} - {{ recordRange[1] }}</label>
     <hr />
-    <button style="justify-self: center; align-self: centre" @click="setupAdvancedFilter">
+    <button
+      class="normal-button"
+      style="justify-self: center; align-self: centre"
+      @click="setupAdvancedFilter"
+    >
       Apply Filter
     </button>
   </div>

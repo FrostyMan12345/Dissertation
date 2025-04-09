@@ -4,10 +4,19 @@
       v-if="
         userState.loggedIn &&
         userState.profilePicture !== undefined &&
-        userState.profilePicture !== null
+        userState.profilePicture !== null &&
+        userState.profilePicture !== ''
       "
       class="profilePicture"
-      :src="`http://localhost:5000/Uploads/${userState.profilePicture}`"
+      :src="`http://localhost:5000/uploads/${userState.profilePicture}`"
+    />
+    <img v-else class="profilePicture" src="../assets/profile_icon.png" />
+  </div>
+  <div v-else-if="small">
+    <img
+      v-if="image !== undefined && image !== '' && image !== null"
+      class="profilePicture"
+      :src="`http://localhost:5000/uploads/${image}`"
     />
     <img v-else class="profilePicture" src="../assets/profile_icon.png" />
   </div>
@@ -16,7 +25,7 @@
       v-if="image !== undefined && image !== '' && image !== null"
       class="profilePicture"
       style="width: 100px; height: 100px"
-      :src="`http://localhost:5000/Uploads/${image}`"
+      :src="`http://localhost:5000/uploads/${image}`"
     />
     <img
       v-else
@@ -40,6 +49,7 @@ import { userState } from '@/UserData'
 
 const props = defineProps({
   image: String,
+  small: { type: Boolean, default: false },
   header: { type: Boolean, default: false },
 })
 </script>

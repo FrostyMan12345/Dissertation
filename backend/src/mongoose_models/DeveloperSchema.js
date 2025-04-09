@@ -6,11 +6,12 @@ const devSchema = new mongoose.Schema(
     password: { type: String },
     image: { type: String },
     dev_comments: {
-      developer_id: { type: String },
-      comment: { type: String },
-      likes: { typoe: Number },
-      dislikes: { type: Number },
-      created: { type: String },
+      game_id: { type: mongoose.Schema.Types.ObjectId, ref: "Game" },
+      // comment: { type: String },
+      // likes: { type: Number },
+      // dislikes: { type: Number },
+      comment_id: { type: mongoose.Schema.Types.ObjectId },
+      // created: { type: String },
     },
   },
   { collection: "Developer" }

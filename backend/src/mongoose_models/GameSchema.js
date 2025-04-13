@@ -29,7 +29,7 @@ const gameSchema = new mongoose.Schema(
         dislikes: { type: Number },
         comment_id: { type: mongoose.Schema.Types.ObjectId },
         created: { type: Number },
-        edited: { type: Number, required: false },
+        edited: { type: Number, default: 0 },
         reactions: {
           type: [
             {

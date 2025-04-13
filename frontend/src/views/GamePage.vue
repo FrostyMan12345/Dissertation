@@ -21,6 +21,7 @@ const loggedTimesPlayed = ref(0)
 const loggedHoursPlayed = ref(0)
 const recordPopup = ref(false)
 const favouritePopup = ref(false)
+const canComment = ref(false)
 const editing = ref(false)
 
 async function getGameData() {
@@ -65,12 +66,23 @@ async function getGameData() {
       console.log(logGet)
       loggedReview.value = logGet.data.logData[0]
       hasLogged.value = hasLoggedResponse.data.logged
+      canComment.value = developerCheck(game)
+    } else {
+      hasLogged.value = []
     }
     // console.log(logGet.data.logData[0])
   } catch (error) {
     console.error('Error fetching game and log data:', error)
     hasLogged.value = false
   }
+}
+
+function developerCheck(game) {
+  console.log(game)
+  return (
+    game.companies.publishers.some((company) => userState.companies.includes(company)) ||
+    game.companies.developers.some((company) => userState.companies.includes(company))
+  )
 }
 
 function activateRecordModal() {
@@ -101,11 +113,12 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- {{ canComment }} -->
   <GameInfo
     v-if="hasLogged !== null"
     :game="game"
     :hasLogged="hasLogged"
-    :image-id="imageID"
+    :canComment="canComment"
     @make-record="activateRecordModal"
     @edit-record="activateEditModal"
     @change-favourite="activateFavouriteModal"
@@ -123,7 +136,7 @@ onMounted(() => {
     @modal-exit="closeModal"
   />
   <CommentMaker
-    v-else-if="hasLogged !== null && userState.developer"
+    v-else-if="hasLogged !== null && userState.developer && canComment"
     :modalActive="recordPopup"
     :edit="editing"
     :comment="loggedReview"

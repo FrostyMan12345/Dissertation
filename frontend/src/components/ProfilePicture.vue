@@ -8,7 +8,7 @@
         userState.profilePicture !== ''
       "
       class="profilePicture"
-      :src="`http://localhost:5000/uploads/${userState.profilePicture}`"
+      :src="`${imageUrl}${userState.profilePicture}`"
     />
     <img v-else class="profilePicture" src="../assets/profile_icon.png" />
   </div>
@@ -16,7 +16,7 @@
     <img
       v-if="image !== undefined && image !== '' && image !== null"
       class="profilePicture"
-      :src="`http://localhost:5000/uploads/${image}`"
+      :src="`${imageUrl}${userState.profilePicture}`"
     />
     <img v-else class="profilePicture" src="../assets/profile_icon.png" />
   </div>
@@ -25,7 +25,7 @@
       v-if="image !== undefined && image !== '' && image !== null"
       class="profilePicture"
       style="width: 100px; height: 100px"
-      :src="`http://localhost:5000/uploads/${image}`"
+      :src="`${imageUrl}${userState.profilePicture}`"
     />
     <img
       v-else
@@ -34,18 +34,11 @@
       src="../assets/profile_icon.png"
     />
   </div>
-  <!-- <h1>
-    {{
-      userState.loggedIn &&
-      userState.profilePicture != undefined &&
-      userState.profilePicture != null
-    }}
-  </h1>
-  <h1>{{ image === undefined }}</h1> -->
 </template>
 
 <script setup>
 import { userState } from '@/UserData'
+const imageUrl = import.meta.env.VITE_IMAGE_URL
 
 const props = defineProps({
   image: String,

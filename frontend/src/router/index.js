@@ -5,22 +5,16 @@ import Testing from '../components/Testing.vue'
 import MainPage from '../views/MainPage.vue'
 import GamePage from '../views/GamePage.vue'
 import ProfilePage from '../views/ProfilePage.vue'
+import DeveloperRequests from '@/views/DeveloperRequests.vue'
+import LandingPage from '@/views/LandingPage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      name: 'landing',
+      component: LandingPage,
     },
     {
       path: '/login',
@@ -47,6 +41,7 @@ const router = createRouter({
       name: 'profile',
       component: ProfilePage,
     },
+    { path: '/developer/requests', name: 'requests', component: DeveloperRequests },
   ],
 })
 

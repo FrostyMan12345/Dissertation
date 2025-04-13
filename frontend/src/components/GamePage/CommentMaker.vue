@@ -2,7 +2,6 @@
   <div v-if="modalActive" class="modal-mask">
     <div class="modal-wrapper">
       <div class="modal-container" ref="target">
-        {{ comment }}
         <h1>Create a comment</h1>
         <textarea
           style="width: 100%"
@@ -22,6 +21,7 @@
           </div>
         </div>
         <!-- <p>{{ commentContent }}</p> -->
+        <!-- {{ comment }} -->
       </div>
     </div>
   </div>
@@ -45,7 +45,7 @@ const cleanedGame = JSON.parse(JSON.stringify(toRaw(props.game)))
 const emit = defineEmits(['modal-exit'])
 const target = ref(null)
 const commentContent = ref(props.comment.value?.comment || '')
-const comment = computed(() => props.comment?.comment !== '')
+const commentj = computed(() => props.comment?.comment !== '')
 // const reactions = ref(props.comment.reactions)
 const route = useRoute()
 const gameId = route.params.id
@@ -64,7 +64,7 @@ async function createComment() {
         likes: 0,
         dislikes: 0,
         created: Date.now(),
-        edited: false,
+        edited: 0,
         comment_id: '',
         reactions: [],
       },
@@ -84,17 +84,24 @@ async function editComment() {
   try {
     console.log(userState)
     console.log(commentContent.value)
-
+    let editTime = 0
+    if (props?.comment?.value?.comments[0].created !== undefined) {
+      console.log('editTime')
+      editTime = Date.now()
+    }
+    console.log(props?.comment?.value?.comments[0].created)
+    console.log(props?.comment?.value?.comments[0]?.comment_id)
+    console.log(editTime)
     let response = await axios.post(`http://localhost:5000/game/${gameId}/comment/edit`, {
       userState,
       comment: {
         comment: commentContent.value,
-        likes: props?.comment?.value?.likes,
-        dislikes: props?.comment?.value?.dislikes,
-        created: props?.comment?.value?.created || Date.now(),
-        edited: Date.now(),
-        comment_id: props?.comment?.value?.comment_id,
-        reactions: props?.comment?.value?.reactions,
+        likes: props?.comment?.value?.comments[0].likes || 0,
+        dislikes: props?.comment?.value?.comments[0].dislikes || 0,
+        created: props?.comment?.value?.comments[0].created || Date.now(),
+        edited: editTime,
+        comment_id: props?.comment?.value?.comments[0]?.comment_id,
+        reactions: props?.comment?.value?.comments[0].reactions || [],
       },
       game: props.game,
     })

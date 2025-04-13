@@ -1,5 +1,5 @@
 <template>
-  <table>
+  <table style="width: 100%">
     <thead>
       <tr>
         <th><h3>Ranking</h3></th>
@@ -8,7 +8,7 @@
         <th><h3>Rating</h3></th>
         <th><h3>Hours Played</h3></th>
         <th><h3>Records</h3></th>
-        <th><h3>Final Score</h3></th>
+        <!-- <th><h3>Final Score</h3></th> -->
       </tr>
     </thead>
     <tbody>
@@ -54,11 +54,11 @@
           </h3>
           <h3 v-else style="text-align: center">{{ game.records_made || 0 }}</h3>
         </td>
-        <td>
+        <!-- <td>
           <h3>
             {{ score[index] }}
           </h3>
-        </td>
+        </td> -->
       </tr>
     </tbody>
   </table>

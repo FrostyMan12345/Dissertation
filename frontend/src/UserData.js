@@ -13,6 +13,7 @@ export class UserData {
       this.userType = savedData?.userType
       this.profilePicture = savedData?.profilePicture
       this.favouriteGames = savedData?.favouriteGames
+      this.companies = savedData?.companies
     } else {
       this.loggedIn = false
       this.username = ''
@@ -22,6 +23,7 @@ export class UserData {
       this.userType = null
       this.profilePicture = null
       this.favouriteGames = {}
+      this.companies = []
     }
   }
 
@@ -47,12 +49,13 @@ export class UserData {
     this.setImage(fileName)
   }
 
-  loginDeveloper(userId, username, fileName) {
+  loginDeveloper(userId, username, fileName, companies) {
     this.loggedIn = true
     this.username = username
     this.developer = true
     this.admin = false
     this.userType = 'Developer'
+    this.companies = companies
     this.setId(userId)
     this.setImage(fileName)
   }
@@ -73,6 +76,7 @@ export class UserData {
     this.developer = false
     this.username = ''
     this.favouriteGames = {}
+    this.companies = []
     this.setImage(null)
   }
 

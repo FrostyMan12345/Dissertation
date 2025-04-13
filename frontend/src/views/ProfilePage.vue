@@ -12,67 +12,83 @@
     </div>
     <h1>{{ username }}</h1>
   </div>
-
-  <div
-    v-if="userType !== 'Developer'"
-    class="horizontal-container"
-    style="align-items: flex-start; justify-content: flex-start"
-  >
+  <div>
     <div
-      v-if="dataRetrieved"
-      style="width: 50%; display: flex; justify-content: center; flex-direction: column"
+      v-if="userType !== 'Developer'"
+      class="horizontal-container"
+      style="align-items: flex-start; justify-content: flex-start"
     >
-      <div class="horizontal-container">
-        <button
-          class="normal-button"
-          @click="updateDataAndConfig(genreData, 'Genre', 'Games Played', false)"
-        >
-          Genre
-        </button>
-        <button
-          class="normal-button"
-          @click="updateDataAndConfig(themeData, 'Themes', 'Games Played', false)"
-        >
-          Theme
-        </button>
-        <button
-          class="normal-button"
-          @click="updateDataAndConfig(genrePlayTimeData, 'Genres', 'Time Played (hours)', true)"
-        >
-          Genre Play Time
-        </button>
-        <button
-          class="normal-button"
-          @click="updateDataAndConfig(themePlayTimeData, 'Themes', 'Time Played (hours)', true)"
-        >
-          Theme Play Time
-        </button>
-        <button
-          class="normal-button"
-          @click="updateDataAndConfig(gameTimeData, 'All Games', 'Time Played (hours)', true)"
-        >
-          Game Play Time
-        </button>
-        <!-- <button @click="dataset = keywordData">Keywords</button> -->
-      </div>
-      <!-- {{ dataset }}
+      <div
+        v-if="dataRetrieved"
+        style="width: 100%; display: flex; justify-content: center; flex-direction: column"
+      >
+        <div class="horizontal-container">
+          <button
+            class="normal-button"
+            @click="updateDataAndConfig(genreData, 'Genre', 'Games Played', false)"
+          >
+            Genre
+          </button>
+          <button
+            class="normal-button"
+            @click="updateDataAndConfig(themeData, 'Themes', 'Games Played', false)"
+          >
+            Theme
+          </button>
+          <button
+            class="normal-button"
+            @click="updateDataAndConfig(genrePlayTimeData, 'Genres', 'Time Played (hours)', true)"
+          >
+            Genre Play Time
+          </button>
+          <button
+            class="normal-button"
+            @click="updateDataAndConfig(themePlayTimeData, 'Themes', 'Time Played (hours)', true)"
+          >
+            Theme Play Time
+          </button>
+          <button
+            class="normal-button"
+            @click="updateDataAndConfig(gameTimeData, 'All Games', 'Time Played (hours)', true)"
+          >
+            Game Play Time
+          </button>
+          <!-- <button @click="dataset = keywordData">Keywords</button> -->
+        </div>
+        <!-- {{ dataset }}
       {{ averageRating }} -->
-      <!-- {{ dataset }} -->
-      <div v-if="dataset.length !== 0">
-        <VueUiVerticalBar v-if="dataRetrieved" :dataset="dataset" :config="barConfig" />
-        <RatingsDisplay v-if="dataRetrieved" :dataset="ratingData" :average="averageRating" />
+        <!-- {{ dataset }} -->
+        <div v-if="dataset.length !== 0">
+          <VueUiVerticalBar
+            v-if="dataRetrieved"
+            style="background-color: rgb(0, 0, 0, 0); color: black"
+            :dataset="dataset"
+            :config="barConfig"
+          />
+          <RatingsDisplay v-if="dataRetrieved" :dataset="ratingData" :average="averageRating" />
+        </div>
+        <div v-else>
+          <h3>User has not made any records</h3>
+        </div>
       </div>
-      <div v-else>
-        <h3>User has not made any records</h3>
-      </div>
+      <FavouriteGames
+        style="width: 100%"
+        :isUser="userState.username == username && userState.userType == userType"
+        :favouriteGames="favouriteGames"
+      />
     </div>
-    <FavouriteGames
-      :isUser="userState.username == username && userState.userType == userType"
-      :favouriteGames="favouriteGames"
-    />
-    <RecommendationsDisplay v-if="username === userState.username" />
+    <div v-else>
+      <h3>Developer Account Representing:</h3>
+      <h3 v-for="company in companies">- {{ company }}</h3>
+    </div>
+    <div v-if="username === userState.username && !userState.developer">
+      <div style="align-items: center; justify-content: center; gap: 10px 10px">
+        <input type="checkbox" v-model="showRecommendations" id="recommendations" />
+        <label style="margin " for="recommendations">Show Game recommendations</label>
+      </div>
+      <RecommendationsDisplay v-if="showRecommendations" />
+    </div>
   </div>
-  <div v-else>Developer Account</div>
 </template>
 
 <script setup>
@@ -106,6 +122,8 @@ const dataRetrieved = ref(false)
 const updatingImage = ref(false)
 const dataset = ref([])
 const favouriteGames = ref({})
+const companies = ref([])
+const showRecommendations = ref(false)
 const chartTitle = ref('Genres')
 const chartSubtitle = ref('')
 const config = reactive({
@@ -191,7 +209,7 @@ const barConfig = reactive({
     fontFamily: 'inherit',
     chart: {
       backgroundColor: '#FFFFFF',
-      color: '#CCCCCC',
+      color: '#000000',
       layout: {
         bars: {
           sort: 'desc',
@@ -207,17 +225,17 @@ const barConfig = reactive({
           fillOpacity: 10,
           underlayerColor: '#FFFFFF',
           dataLabels: {
-            color: '#CCCCCC',
+            color: '#000000',
             bold: true,
             fontSize: 12,
             value: { show: true, roundingValue: 0, prefix: '', suffix: '' },
             percentage: { show: true, roundingPercentage: 0 },
             offsetX: 0,
           },
-          nameLabels: { show: true, color: '#CCCCCC', bold: false, fontSize: 10, offsetX: 0 },
-          parentLabels: { show: true, color: '#CCCCCC', bold: false, fontSize: 10, offsetX: 0 },
+          nameLabels: { show: true, color: '#000000', bold: false, fontSize: 10, offsetX: 0 },
+          parentLabels: { show: true, color: '#000000', bold: false, fontSize: 10, offsetX: 0 },
         },
-        highlighter: { color: '#FFFFFF', opacity: 5 },
+        highlighter: { color: '#000000', opacity: 5 },
         separators: { show: true, color: '#343434', strokeWidth: 1 },
       },
       title: {
@@ -234,7 +252,7 @@ const barConfig = reactive({
         position: 'top',
         show: false,
         fontSize: 14,
-        color: '#CCCCCC',
+        color: '#000000',
         bold: true,
         roundingValue: 0,
         backgroundColor: '#1A1A1A',
@@ -245,7 +263,7 @@ const barConfig = reactive({
       tooltip: {
         show: false,
         backgroundColor: '#1A1A1A',
-        color: '#CCCCCC',
+        color: '#000000',
         fontSize: 14,
         showValue: true,
         showPercentage: true,
@@ -366,8 +384,9 @@ async function getUserData() {
     console.log(response.data)
     userId.value = response.data.user._id
     profileImage.value = response.data.user.image
-    gameRecords.value = response.data.user.games_played
-    const favourites = response.data.user.favourite_games
+    gameRecords.value = response.data.user?.games_played
+    const favourites = response.data.user?.favourite_games
+    companies.value = response.data.user?.companies
     console.log(response.data.user.image)
     parseFavouriteGames(favourites)
     parseGameAnalytics(gameRecords.value)
@@ -490,6 +509,13 @@ onMounted(() => {
   opacity: 0.7;
 }
 
+input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  justify-self: center;
+  justify-content: space-around;
+  align-self: center;
+}
 /* .profile-picture {
   width: 100px;
   height: 100px;

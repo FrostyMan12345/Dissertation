@@ -1,4 +1,4 @@
-require("dotenv").config({ path: "../../.env" });
+require("dotenv").config({ path: "../.env" });
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
@@ -6,6 +6,7 @@ const User = require("./mongoose_models/UserSchema");
 const Admin = require("./mongoose_models/AdminSchema");
 const Game = require("./mongoose_models/GameSchema");
 const Developer = require("./mongoose_models/DeveloperSchema");
+const Companies = require("./mongoose_models/CompanySchema");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const path = require("path");
@@ -15,14 +16,49 @@ const multer = require("multer");
 const { genreVector } = require("./genreVector");
 const { themeVector } = require("./themeVector");
 const similarity = require("compute-cosine-similarity");
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const nodemailer = require("nodemailer");
+const { validate } = require("deep-email-validator");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "profile_pictures",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
+    public_id: (req, file) => {
+      return `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    },
   },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + path.extname(file.originalname);
-    cb(null, uniqueName);
+});
+
+// const transporter = nodemailer.createTransport({
+//   host: "smtp.office365.com",
+//   port: 587, // TLS port
+//   secure: false, // Use STARTTLS (not SSL)
+//   auth: {
+//     user: process.env.EMAIL, // New email address
+//     pass: process.env.EMAIL_PASSWORD, // New app password
+//   },
+//   tls: {
+//     rejectUnauthorized: false, // Optional: helps with SSL certificate issues
+//   },
+// });
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+  tls: {
+    rejectUnauthorized: false,
   },
 });
 
@@ -36,6 +72,7 @@ app.use(express.json());
 
 const azureAPI = "http://localhost:7071/" || process.env.AZUREAPI;
 
+mongoose.set("debug", false);
 mongoose
   .connect(
     process.env.MONGODB_URL ||
@@ -133,7 +170,7 @@ app.get("/search/users", async (req, res) => {
 app.get("/game/:id/data", async (req, res) => {
   const { id } = req.params;
   try {
-    var game = await Game.findOne({ id: id })
+    let game = await Game.findOne({ id: id })
       .populate({ path: "comments.dev_id", select: "username image" })
       .lean();
 
@@ -146,11 +183,13 @@ app.get("/game/:id/data", async (req, res) => {
     }
     game = parseGameData(game);
     // console.log("Game Data:", game);
-    for (let record of game.played_by) {
-      if (record.user_type == "User") {
-        record.user_id = await User.findById(record.user_id).select("image");
-      } else if (record.user_type == "Admin") {
-        record.user_id = await Admin.findById(record.user_id).select("image");
+    if (game.played_by) {
+      for (let record of game?.played_by) {
+        if (record.user_type == "User") {
+          record.user_id = await User.findById(record.user_id).select("image");
+        } else if (record.user_type == "Admin") {
+          record.user_id = await Admin.findById(record.user_id).select("image");
+        }
       }
     }
     res.json(game);
@@ -173,10 +212,6 @@ app.post("/register/user", async (req, res) => {
   console.log(
     `Attempting register user with Username: ${username} and Password: ${password}`
   );
-  const credentialAccept = validateCredentials(username, password);
-  if (credentialAccept != "Valid") {
-    return res.status(400).json({ message: credentialAccept });
-  }
   return await registerAccount("Users", username, password, res);
 });
 
@@ -193,10 +228,6 @@ app.post("/register/admin", async (req, res) => {
   console.log(
     `Attempting register admin with Username: ${username} and Password: ${password}`
   );
-  const credentialAccept = validateCredentials(username, password);
-  if (credentialAccept != "Valid") {
-    return res.status(400).json({ message: credentialAccept });
-  }
   return await registerAccount("Admin", username, password, res);
 });
 
@@ -209,15 +240,134 @@ app.get("/login/developer", async (req, res) => {
 });
 
 app.post("/register/developer", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, email, request } = req.body;
   console.log(
-    `Attempting register developer with Username: ${username} and Password: ${password}`
+    `Attempting register developer with Username: ${username}, Password: ${password}, email ${email}, and request ${request}`
   );
-  const credentialAccept = validateCredentials(username, password);
-  if (credentialAccept != "Valid") {
-    return res.status(400).json({ message: credentialAccept });
+  const validEmail = await validate(email);
+
+  if (
+    !validEmail.valid &&
+    validEmail.reason !== "smtp" &&
+    validEmail.reason !== "typo"
+  ) {
+    console.log(validEmail);
+    return res.status(400).json({ message: validEmail.reason });
   }
-  return await registerAccount("Developer", username, password, res);
+  return await registerAccount(
+    "Developer",
+    username,
+    password,
+    res,
+    email,
+    request
+  );
+});
+
+app.post("/validations/:username/developer/:status", async (req, res) => {
+  const status = req.params.status;
+  const username = req.params.username;
+  const { email, selectedCompanies, adminResponse } = req.body;
+  console.log({
+    status: status,
+    username: username,
+    email: email,
+    selectedComapnies: selectedCompanies,
+    adminResponse: adminResponse,
+  });
+  let userInfo = {};
+  try {
+    if (status === "1") {
+      const companyUpdate = await Companies.updateMany(
+        { name: { $in: selectedCompanies } },
+        { $set: { hasDeveloper: true } },
+        { returnDocument: "after" }
+      );
+      let companyList = "";
+      selectedCompanies.forEach((company) => {
+        companyList = companyList + `- ${company}\n`;
+      });
+      userInfo = await Developer.findOneAndUpdate(
+        { username: username },
+        {
+          $set: {
+            verified: true,
+            companies: selectedCompanies,
+          },
+        },
+        { returnDocument: "after" }
+      );
+      console.log(userInfo);
+      console.log(companyList);
+      try {
+        const mailSpecifications = {
+          from: process.env.EMAIL,
+          to: email,
+          subject: `Verification for developer complete`,
+          text: `Hello ${username},\n\nWe are emailing you to inform you that our admin team has reviewed your developer request and has verified your account! You may now access your account and make a comment on games you have permissons for.\n\nYou have permissions for games with these involved companies:\n${companyList}\n\n - GameRecords Admin Team\n\nDO NOT REPLY TO TTHIS EMAIL`,
+        };
+
+        const emailResponse = await transporter.sendMail(mailSpecifications);
+        console.log(emailResponse);
+
+        return res.status(200).json({
+          message: "Account Verified",
+          info: emailResponse.response,
+        });
+      } catch (error) {
+        console.error("Error sending email:", error);
+        return res
+          .status(500)
+          .json({ message: "Error sending email", error: error });
+      }
+    } else {
+      userInfo = await Developer.findOneAndDelete({ username: username });
+      // console.log(email);
+      try {
+        const mailSpecifications = {
+          from: process.env.EMAIL,
+          to: email,
+          subject: `Verification for developer complete`,
+          text: `Hello ${username},\n\nWe are emailing you to inform you that our admin team has reviewed your developer request and has concluded you are not suitable for a developer account.\n\nReason:\n${adminResponse} \n\nYour credentials have been deleted from our database, and your account will be deleted.\n\n - GameRecords Admin Team\n\nDO NOT REPLY TO TTHIS EMAIL`,
+        };
+
+        const emailResponse = await transporter.sendMail(mailSpecifications);
+        console.log(emailResponse);
+
+        return res.status(200).json({
+          message: "Account Deleted",
+          info: emailResponse.response,
+        });
+      } catch (error) {
+        console.error("Error sending email:", error);
+        return res
+          .status(500)
+          .json({ message: "Error sending email", error: error });
+      }
+    }
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Failure to verify account", error: error });
+  }
+});
+
+app.get("/developer/requests", async (req, res) => {
+  try {
+    const requestResponses = await Developer.find({ verified: false }).select(
+      "email username request"
+    );
+    console.log(requestResponses);
+    return res.status(200).json({
+      message: "Developer accounts to verify found",
+      requests: requestResponses,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failure to find developer accounts to verify",
+      error: error,
+    });
+  }
 });
 
 app.post("/game/:id/record/make", async (req, res) => {
@@ -230,8 +380,8 @@ app.post("/game/:id/record/make", async (req, res) => {
     review = {},
     game,
   } = req.body;
-  var schema = "";
-  var userType = "";
+  let schema = "";
+  let userType = "";
   if (userState.developer) {
     res.status(400).json({ message: "Developer cannot log games" });
     return;
@@ -247,8 +397,8 @@ app.post("/game/:id/record/make", async (req, res) => {
   console.log(Object.keys(review).length === 0);
   const reviewId = new mongoose.Types.ObjectId();
   try {
-    var playedBy = {};
-    var gamesPlayed = {};
+    let playedBy = {};
+    let gamesPlayed = {};
     if (Object.keys(review).length === 0) {
       console.log("Review Not Being added");
       playedBy = {
@@ -328,8 +478,8 @@ app.post("/game/:id/record/edit", async (req, res) => {
     review = {},
     game,
   } = req.body;
-  var schema = "";
-  var userType = "";
+  let schema = "";
+  let userType = "";
   if (userState.developer) {
     res.status(400).json({ message: "Developer cannot log games" });
     return;
@@ -656,8 +806,8 @@ app.post("/game/:id/comment/reaction/update", async (req, res) => {
       reactionResponse = await Game.findOneAndUpdate(
         {
           id: id, // Match game ID
-          "comment.comment_id": new mongoose.Types.ObjectId(commentId), // Match review ID
-          "comment.reactions.user_id": new mongoose.Types.ObjectId(
+          "comments.comment_id": new mongoose.Types.ObjectId(commentId), // Match review ID
+          "comments.reactions.user_id": new mongoose.Types.ObjectId(
             userState.userId
           ), // Match reaction's user ID
         },
@@ -729,7 +879,7 @@ app.get("/game/:id/record/reaction/get", async (req, res) => {
       game.played_by.flatMap((p) => p.review)
     );
     // console.log(reviews);
-    var reviewsReacted = {};
+    let reviewsReacted = {};
     if (reactionResponse) {
       reviews.forEach((review) => {
         if (review != undefined) {
@@ -772,17 +922,22 @@ app.get("/game/:id/comment/reaction/get", async (req, res) => {
       id: id,
       "comments.reactions.user_id": new mongoose.Types.ObjectId(userId),
     }).select("comments");
-    console.log(reactionResponse);
+    // console.log(reactionResponse[0].comments);
+    // console.log(reactionResponse);
+
     // console.log(reviews);
-    var commentsReacted = {};
+    let commentsReacted = {};
     if (reactionResponse) {
-      reactionResponse.forEach((comment) => {
+      reactionResponse[0]?.comments.forEach((comment) => {
         if (comment != undefined) {
           reactions = comment.reactions;
-          // console.log(review);
-          // console.log(reactions);
+          console.log(comment);
+          console.log(22222222222);
+          // console.log(comment[0]);
+          console.log(reactions);
           if (reactions) {
             reactions.forEach((reaction) => {
+              console.log(reaction);
               if (
                 reaction.user_id.equals(new mongoose.Types.ObjectId(userId))
               ) {
@@ -798,7 +953,8 @@ app.get("/game/:id/comment/reaction/get", async (req, res) => {
         }
       });
     }
-    // console.log(reviewsReacted);
+    console.log(commentsReacted);
+    console.log("bazinga");
     res.status(200).json({
       message: "Reaction Get Success",
       comments: commentsReacted,
@@ -970,8 +1126,11 @@ app.post(
     const userType = req.params.userType;
     const fileName = req.file.filename;
     const oldFile = req.body.oldFile;
-    console.log(userId, fileName, oldFile);
-    var schema = User;
+
+    const imageUrl = req.file.path;
+
+    console.log(userId, fileName, oldFile, imageUrl);
+    let schema = User;
     if (userType === "Admin") {
       schema = Admin;
     } else if (userType === "Developer") {
@@ -983,7 +1142,6 @@ app.post(
           image: fileName,
         },
       };
-      // console.log(newImageCommand);
       const updateImageResponse = await schema.findOneAndUpdate(
         {
           _id: new mongoose.Types.ObjectId(userId),
@@ -992,13 +1150,13 @@ app.post(
         { returnDocument: "after" }
       );
       console.log(updateImageResponse);
-      if (oldFile !== "" && oldFile !== undefined && oldFile !== null) {
-        const uploadsPath = path.join(__dirname, "uploads");
-        FileSystem.unlink(path.join(uploadsPath, oldFile), (error) => {
+
+      if (oldFile && oldFile !== "") {
+        await cloudinary.uploader.destroy(oldFile, (error, result) => {
           if (error) {
-            console.error(`Deleting old file failure: ${error}`);
+            console.error("Error deleting old Cloudinary image:", error);
           } else {
-            console.log("Deleted old file");
+            console.log("Old Cloudinary image deleted:", result);
           }
         });
       }
@@ -1015,7 +1173,7 @@ app.get("/get/:userType/:username", async (req, res) => {
   const username = req.params.username;
   const userType = req.params.userType;
   console.log(`Getting user data of ${username} from the ${userType} table`);
-  var schema = User;
+  let schema = User;
   if (userType === "Admin") {
     schema = Admin;
   } else if (userType === "Developer") {
@@ -1046,9 +1204,9 @@ app.get("/get/:userType/:username", async (req, res) => {
             path: "games_played.game_id",
             select: "genres themes keywords name platforms",
           },
-          { path: "favourite_games.first", select: "name cover" },
-          { path: "favourite_games.second", select: "name cover" },
-          { path: "favourite_games.third", select: "name cover" },
+          { path: "favourite_games.first", select: "name cover id" },
+          { path: "favourite_games.second", select: "name cover id" },
+          { path: "favourite_games.third", select: "name cover id" },
           // { path: "games_played.review" },
         ]);
     }
@@ -1063,12 +1221,12 @@ app.get("/get/:userType/:username/recommendations", async (req, res) => {
   const username = req.params.username;
   const userType = req.params.userType;
   console.log(`Getting user data of ${username} from the ${userType} table`);
-  var schema = User;
+  let schema = User;
   if (userType === "Admin") {
     schema = Admin;
   } else if (userType === "Developer") {
     res
-      .status(404)
+      .status(400)
       .json({ message: `Developer cannot recieve recommendations` });
     return;
   }
@@ -1097,7 +1255,7 @@ app.post(
     console.log(
       `Changing favoruite games list with ${game} in ${position} place`
     );
-    var schema = User;
+    let schema = User;
     if (userType === "Admin") {
       schema = Admin;
     } else if (userType === "Developer") {
@@ -1228,6 +1386,22 @@ app.get("/leaderboard/:sortBy", async (req, res) => {
   }
 });
 
+app.get("/companies", async (req, res) => {
+  try {
+    const companyResponse = await Companies.find({
+      $or: [{ hasDeveloper: { $exists: false } }, { hasDeveloper: false }],
+    }).lean();
+    console.log(companyResponse);
+    res
+      .status(200)
+      .json({ message: "Get Company Success", companies: companyResponse });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failure during get companies", error: error });
+  }
+});
+
 app.use("/uploads", express.static("uploads"));
 
 app.listen(PORT, () => {
@@ -1263,33 +1437,72 @@ function parseFilters(filterData) {
   return filterData;
 }
 
-async function registerAccount(type, username, password, res) {
+async function registerAccount(
+  type,
+  username,
+  password,
+  res,
+  email = null,
+  request = null
+) {
   if (type != "Users" && type != "Admin" && type != "Developer") {
     return res.status(500).json({ message: "User type invalid" });
   }
   try {
-    const userResponse = await db
-      .collection("Users")
-      .findOne({ username: username });
-    const adminResponse = await db
-      .collection("Admin")
-      .findOne({ username: username });
-    const developerResponse = await db
-      .collection("Developer")
-      .findOne({ username: username });
+    const userResponse = await User.findOne({ username: username });
+    const adminResponse = await Admin.findOne({ username: username });
+    const developerResponse = await Developer.findOne({ username: username });
+    console.log(!userResponse && !adminResponse && !developerResponse);
+    console.log(userResponse, adminResponse, developerResponse);
     if (!userResponse && !adminResponse && !developerResponse) {
       const passwordHash = getHash(password);
-      const registerResponse = await db.collection(type).insertOne({
-        username: username,
-        password: passwordHash,
-        games_played: [],
-        image: "",
-      });
+      let registerResponse = {};
+      if (type === "Developer") {
+        registerResponse = await db.collection(type).insertOne({
+          username: username,
+          password: passwordHash,
+          email: email,
+          dev_comments: [],
+          verified: false,
+          request: request,
+          image: "",
+        });
+
+        try {
+          const mailSpecifications = {
+            from: process.env.EMAIL,
+            to: email,
+            subject: `Verification for developer begun`,
+            text: `Hello ${username},\n\nThis email is to confirm that verification for your developer account for GameRecords has begun. Our admin team shall view your credentials to ensure that you are suitable for this account. \n\nMore emails may be sent requetsing more information. \n\nYour Request:\n${request} \n\n- GameRecords Admin Team \n\nDO NOT REPLY TO TTHIS EMAIL`,
+          };
+
+          const emailResponse = await transporter.sendMail(mailSpecifications);
+          console.log(emailResponse);
+
+          return res.status(200).json({
+            message: "Awaiting Verification",
+            info: emailResponse.response,
+          });
+        } catch (error) {
+          console.error("Error sending email:", error);
+          return res
+            .status(500)
+            .json({ message: "Error sending email", error: error });
+        }
+      } else {
+        registerResponse = await db.collection(type).insertOne({
+          username: username,
+          password: passwordHash,
+          games_played: [],
+          image: "",
+        });
+      }
       console.log(registerResponse);
       return res.status(200).json({
         message: "Register Complete",
         userId: registerResponse.insertedId,
         username: username,
+        email: email,
       });
     } else {
       return res.status(400).json({ message: "Username Already Exists" });
@@ -1302,7 +1515,7 @@ async function registerAccount(type, username, password, res) {
 
 async function loginAccount(type, username, password, res) {
   console.log(type);
-  var schema = User;
+  let schema = User;
   if (type === "Admin") {
     schema = Admin;
   } else if (type === "Developer") {
@@ -1313,8 +1526,10 @@ async function loginAccount(type, username, password, res) {
     let response = {};
     if (type === "Developer") {
       response = await schema.findOne({
+        // email: email,
         username: username,
         password: passwordHash,
+        verified: true,
       });
     } else {
       response = await schema
@@ -1325,8 +1540,6 @@ async function loginAccount(type, username, password, res) {
           { path: "favourite_games.third", select: "name cover" },
         ]);
     }
-    console.log(response);
-    console.log(response.image);
     if (response) {
       return res.status(200).json({
         message: "Login Success",
@@ -1334,6 +1547,7 @@ async function loginAccount(type, username, password, res) {
         username: username,
         image: response.image,
         favouriteGames: response.favourite_games,
+        companies: response.companies,
       });
     } else {
       return res
@@ -1343,18 +1557,6 @@ async function loginAccount(type, username, password, res) {
   } catch (error) {
     console.error("Database query error:", error);
     return res.status(500).json({ message: "Error logging in user" });
-  }
-}
-
-function validateCredentials(username, password) {
-  if (username.length >= 5) {
-    if (password.length >= 8) {
-      return "Valid";
-    } else {
-      return "Password is not a valid length";
-    }
-  } else {
-    return "Username is not a valid length";
   }
 }
 
@@ -1394,7 +1596,7 @@ async function getCredentials() {
 }
 
 function getGenres(genres) {
-  var gameGenres = [];
+  let gameGenres = [];
   try {
     genres.forEach((genre) => {
       gameGenres.push(genre["name"]);
@@ -1404,7 +1606,7 @@ function getGenres(genres) {
 }
 
 function parseCompanies(companyData) {
-  var devPubList = { developers: [], publishers: [] };
+  let devPubList = { developers: [], publishers: [] };
   try {
     companyData.forEach((company) => {
       if (company["developer"]) {
@@ -1418,7 +1620,7 @@ function parseCompanies(companyData) {
 }
 
 function parseKeywords(keywords) {
-  var keywordNames = [];
+  let keywordNames = [];
   try {
     keywords.forEach((keyword) => {
       keywordNames.push(keyword["name"]);
@@ -1428,7 +1630,7 @@ function parseKeywords(keywords) {
 }
 
 function parseThemes(themes) {
-  var themeNames = [];
+  let themeNames = [];
   try {
     themes.forEach((theme) => {
       themeNames.push(theme["name"]);
@@ -1438,7 +1640,7 @@ function parseThemes(themes) {
 }
 
 function parsePorts(ports) {
-  var portNames = [];
+  let portNames = [];
   try {
     ports.forEach((port) => {
       portNames.push(port["name"]);
@@ -1448,7 +1650,7 @@ function parsePorts(ports) {
 }
 
 function parseExpandedGames(expandedGames) {
-  var expandedGameNames = [];
+  let expandedGameNames = [];
   try {
     expandedGames.forEach((game) => {
       expandedGameNames.push(game["name"]);
@@ -1458,7 +1660,7 @@ function parseExpandedGames(expandedGames) {
 }
 
 function parsePlatforms(platforms) {
-  var platformNames = [];
+  let platformNames = [];
   platforms.forEach((platform) => {
     platformNames.push(platform["name"]);
   });
@@ -1467,7 +1669,7 @@ function parsePlatforms(platforms) {
 
 function getAverage(values, lowRange, highRange) {
   console.log(values);
-  var average = 0;
+  let average = 0;
   if (values.length > 3) {
     const Q1 = values[Math.floor(values.length * lowRange)];
     const Q3 = values[Math.floor(values.length * highRange)];
@@ -1490,56 +1692,6 @@ function getAverage(values, lowRange, highRange) {
   return parseFloat(average.toFixed(2));
 }
 
-async function getFavourites(schema, username) {
-  try {
-    const getFavouritesResponse = await schema
-      .findOne({ username: username })
-      .select("favourite_games");
-    console.log(getFavouritesResponse);
-    return getFavouritesResponse;
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// async function updateFavouriteGenres(userType, userId) {
-//   var schema = User;
-//   if (userType === "Admin") {
-//     schema = Admin;
-//   } else if (userType === "Developer") {
-//     return [];
-//   }
-//   try {
-//     const getGamesPlayed = await schema
-//       .find({ _id: userId })
-//       .select("games_played")
-//       .populate({ path: "games_played.game_id", select: "genre" });
-//     console.log(getGamesPlayed);
-//   } catch (error) {
-//     console.log(`Error geting favourites: ${error}`);
-//     return;
-//   }
-//   var genrePopCopy = Object.assign({}, genrePop);
-//   games_played.forEach((game) => {
-//     game._id.genres.forEach((genre) => {
-//       if (genres.some((g) => g.name === genre)) {
-//         genrePopCopy[genre] = (genrePopCopy[genre] || 0) + 1;
-//       }
-//     });
-//   });
-//   console.log(genrePopCopy);
-//   console.log(length(getGamesPlayed));
-//   Object.keys(genrePopCopy).forEach((key) => {
-//     genrePopCopy[key] = genrePopCopy[key] / getGamesPlayed.length;
-//   });
-// }
-
-function jaccardSimilarity(setA, setB) {
-  const intersection = new Set([...setA].filter((x) => setB.has(x)));
-  const union = new Set([...setA, ...setB]);
-  return union.size === 0 ? 0 : intersection.size / union.size;
-}
-
 function confidenceScore(game) {
   const rating = (game.average_rating || 0) / 5;
   const records = game.records_made || 0;
@@ -1550,8 +1702,6 @@ function confidenceScore(game) {
 function cosineVector(gameVector, baseVector) {
   return baseVector.map((v) => (gameVector.has(v) ? 1 : 0));
 }
-
-// function calculateUserPrefernceVector()
 
 async function getGameRecommendations(username, schema) {
   try {
@@ -1681,7 +1831,6 @@ async function getGameRecommendations(username, schema) {
         });
       }
     }
-    // console.log(genreVector, themeVector, keywordVector);
     let relevantGames = await Game.aggregate([
       {
         $match: {
@@ -1694,25 +1843,6 @@ async function getGameRecommendations(username, schema) {
       },
     ]);
     let recommendations = [];
-    // console.log(relevantGames.length);
-    // console.log(
-    //   userGenreVector,
-    //   genreVector,
-    //   userGenreVector.length,
-    //   genreVector.length
-    // );
-    // console.log(
-    //   userThemeVector,
-    //   themeVector,
-    //   userThemeVector.length,
-    //   themeVector.length
-    // );
-    // console.log(
-    //   userKeywordVector,
-    //   keywordVector,
-    //   userKeywordVector.length,
-    //   keywordVector.length
-    // );
     for (let game of relevantGames) {
       if (userGames.has(game._id.toString())) continue;
       let gameGenres = cosineVector(
@@ -1730,7 +1860,6 @@ async function getGameRecommendations(username, schema) {
       let genreScore = similarity(userGenreVector, gameGenres);
       let themeScore = similarity(userThemeVector, gameThemes);
       let keywordScore = similarity(userKeywordVector, gameKeywords);
-      // console.log(genreScore, gameGenres);
       let finalScore =
         0.35 * (genreScore || 0) +
         0.35 * (themeScore || 0) +

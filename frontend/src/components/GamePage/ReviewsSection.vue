@@ -7,7 +7,7 @@
     <DeveloperComment
       v-if="commentsReacted[comment?.comment_id] != undefined"
       :commentInfo="comment"
-      :reaction="reviewsReacted[comment?.comment_id]"
+      :reaction="commentsReacted[comment?.comment_id]"
       :reactedPrior="true"
       :image="comment.dev_id?.image"
     />
@@ -18,6 +18,10 @@
       :reactedPrior="false"
       :image="comment.dev_id?.image"
     />
+    <!-- {{ comment.comment_id }}
+    {{ commentsReacted }}
+    {{ commentsReacted[comment?.comment_id] != undefined }}
+    {{ commentsReacted[comment?.comment_id] }} -->
   </div>
 
   <div v-if="playedBy.some((played) => played?.review)">
@@ -73,7 +77,7 @@ const reviewsReacted = reactive({})
 const commentsReacted = reactive({})
 
 async function getReacted() {
-  if (!userState.loggedIn) {
+  if (!userState.loggedIn || userState.developer) {
     return
   }
   console.log(`UserId: ${userState.userId}`)
@@ -96,7 +100,7 @@ async function getReacted() {
     )
     Object.assign(reviewsReacted, reviewResponse.data.reviews)
     Object.assign(commentsReacted, commentResponse.data.comments)
-    console.log(commentsReacted)
+    console.log(commentResponse.data.comments)
   } catch (error) {
     console.error('Reaction Get Failure ', error)
   }

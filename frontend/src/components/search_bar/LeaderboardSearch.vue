@@ -4,7 +4,7 @@
       type="search"
       v-model="input"
       placeholder="Search for a game"
-      style="width: 217px"
+      style="width: 100%"
       @focus="searchIsFocused = true"
       @blur="handleBlur"
       @input="search(input)"

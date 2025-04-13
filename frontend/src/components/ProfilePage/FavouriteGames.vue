@@ -24,7 +24,13 @@
             <h4>{{ index + 1 }}</h4>
           </td>
           <td>
-            <h4>{{ game.name }}</h4>
+            <h3>
+              <a
+                style="color: blue; text-decoration: none; text-align: start"
+                :href="`http://localhost:5173/game/${game.id}`"
+                >{{ game.id }}</a
+              >
+            </h3>
           </td>
           <td>
             <img

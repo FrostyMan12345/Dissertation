@@ -140,16 +140,19 @@
     <div class="vertical-sticky-container">
       <LeaderboardSearch
         v-if="!leaderboardLoading"
+        style="width: 100%"
         :gameList="leaderboard"
         @change-leaderboard="updateLeaderboard"
       />
       <CriteriaSelector
         v-if="!leaderboardLoading"
+        style="width: 100%"
         class="shadowed"
         @change-ranking="changeCriteria"
       />
       <CatergoryFilter
         v-if="!leaderboardLoading"
+        style="width: 100%"
         :maxHours="maxHoursValue"
         :maxRevisits="maxRevisitsValue"
         :maxRecords="maxRecordsValue"
@@ -326,13 +329,13 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   top: 20px;
-  background: white;
+  background-color: rgb(0, 0, 0, 0);
   padding: 10px;
   border-radius: 5px;
   z-index: 100;
-  width: 217px;
+  width: 17%;
   row-gap: 10px;
   margin-left: 50px;
 }

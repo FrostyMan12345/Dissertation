@@ -45,7 +45,7 @@
       <!-- <label>reaction: {{ reaction }}</label>
       <label>{{ hasReacted }}</label> -->
       <!-- {{ userData }} -->
-      <!-- {{ commentInfo }} -->
+      <!-- {{ commentInfo.comment_id }} -->
     </div>
   </div>
 </template>
@@ -126,6 +126,7 @@ function dislikeReview() {
 async function updateReaction(newReaction, newLikes, newDislikes) {
   try {
     console.log(newReaction)
+    console.log(props.commentInfo.comment_id)
     const response = await axios.post(
       `http://localhost:5000/game/${gameId}/comment/reaction/update`,
       {
@@ -134,7 +135,7 @@ async function updateReaction(newReaction, newLikes, newDislikes) {
         newDislikes,
         userState,
         reactedPrior: hasReacted.value,
-        comment: props.commentInfo.comment_id,
+        commentId: props.commentInfo.comment_id,
       },
     )
     reaction.value = newReaction

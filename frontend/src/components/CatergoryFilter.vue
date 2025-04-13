@@ -10,7 +10,7 @@
       v-model="genreFilter"
       mode="tags"
       style="margin-bottom: 10px"
-      :options="genres.map((genre) => (genre = genre.name))"
+      :options="genres.map((genre) => genre.name)"
     />
     <!-- <select style="gap: 10px" v-model="genreFilter" multiple>
       <option disabled value="">Select one</option>

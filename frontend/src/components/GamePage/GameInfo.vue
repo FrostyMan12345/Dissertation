@@ -2,23 +2,29 @@
   <div class="vertical-container">
     <h1>{{ game?.gameTitle || 'Unknown Game' }}</h1>
     <div class="horizontal-container">
-      <div class="vertical-container">
-        <div class="game-info" style="margin-bottom: 10px">
-          <p v-if="game.description == 'No description available'">{{ game.summary }}</p>
-          <p v-else>{{ game.description }}</p>
-          <hr />
-          <p>Developers: {{ game?.companies['developers']?.join(', ') || 'Unknown Developers' }}</p>
-          <p>Publishers: {{ game?.companies['publishers']?.join(', ') || 'Unknown Publishers' }}</p>
-          <hr />
-          <p>Genres: {{ game?.genres?.join(', ') || 'Unknown Genres' }}</p>
-          <p>Themes: {{ game?.themes?.join(', ') || 'Unknown Themes' }}</p>
-          <p>Keywords: {{ game?.keywords?.join(', ') || 'Unknown Keywords' }}</p>
-          <hr />
-          <p>Platforms: {{ game?.platforms?.join(', ') || 'Unknown Platforms' }}</p>
-          <p>Ports: {{ game?.ports?.join(', ') || 'None' }}</p>
-          <p>Expanded Games: {{ game?.expandedGames?.join(', ') || 'None' }}</p>
+      <div style="min-width: 75%">
+        <div class="vertical-container">
+          <div class="game-info" style="margin-bottom: 10px">
+            <p v-if="game.description == 'No description available'">{{ game.summary }}</p>
+            <p v-else>{{ game.description }}</p>
+            <hr />
+            <p>
+              Developers: {{ game?.companies['developers']?.join(', ') || 'Unknown Developers' }}
+            </p>
+            <p>
+              Publishers: {{ game?.companies['publishers']?.join(', ') || 'Unknown Publishers' }}
+            </p>
+            <hr />
+            <p>Genres: {{ game?.genres?.join(', ') || 'Unknown Genres' }}</p>
+            <p>Themes: {{ game?.themes?.join(', ') || 'Unknown Themes' }}</p>
+            <p>Keywords: {{ game?.keywords?.join(', ') || 'Unknown Keywords' }}</p>
+            <hr />
+            <p>Platforms: {{ game?.platforms?.join(', ') || 'Unknown Platforms' }}</p>
+            <p>Ports: {{ game?.ports?.join(', ') || 'None' }}</p>
+            <p>Expanded Games: {{ game?.expandedGames?.join(', ') || 'None' }}</p>
+          </div>
+          <ReviewsSection :playedBy="game.playedBy" :dev-comments="game.comments" />
         </div>
-        <ReviewsSection :playedBy="game.playedBy" :dev-comments="game.comments" />
       </div>
       <div class="vertical-container-2">
         <div class="game-metrics">
@@ -50,6 +56,7 @@
         <div class="record-comment-button" v-if="!hasLogged">
           <button
             class="normal-button"
+            style="min-width: 100%"
             @click="emit('make-record')"
             v-if="userState.loggedIn && !userState.developer"
           >
@@ -57,12 +64,14 @@
           </button>
           <button
             class="normal-button"
-            style="min-width: 100%"
             @click="emit('make-record')"
-            v-else-if="userState.loggedIn && userState.developer"
+            v-else-if="userState.loggedIn && userState.developer && canComment"
           >
             + Create a Comment
           </button>
+          <p v-else-if="userState.loggedIn && userState.developer && !canComment">
+            You cannot comment on this game
+          </p>
           <p v-else>Log in to create a record</p>
         </div>
         <div class="record-comment-button" v-else>
@@ -78,7 +87,7 @@
             class="normal-button"
             style="min-width: 100%"
             @click="emit('edit-record')"
-            v-if="userState.loggedIn && userState.developer"
+            v-if="userState.loggedIn && userState.developer && canComment"
           >
             Edit your comment
           </button>
@@ -105,6 +114,7 @@ import ReviewsSection from './ReviewsSection.vue'
 const props = defineProps({
   game: Object,
   hasLogged: Boolean,
+  canComment: Boolean,
 })
 
 const rating = props.game?.rating
@@ -141,7 +151,7 @@ const emit = defineEmits(['make-record', 'edit-record'])
 .game-metrics {
   border: 1px solid blue;
   padding: 10px;
-  min-width: 15%;
+  min-width: 100%;
   min-height: 400px;
   border-radius: 10px;
 }
@@ -150,7 +160,7 @@ const emit = defineEmits(['make-record', 'edit-record'])
   border: 1px solid blue;
   background-color: azure;
   padding: 10px;
-  min-width: 75%;
+  min-width: 100%;
   border-radius: 10px;
 }
 

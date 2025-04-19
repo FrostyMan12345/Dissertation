@@ -7,8 +7,9 @@
         <th><h3>Cover</h3></th>
         <th><h3>Rating</h3></th>
         <th><h3>Hours Played</h3></th>
+        <th><h3>Revisits</h3></th>
         <th><h3>Records</h3></th>
-        <!-- <th><h3>Final Score</h3></th> -->
+        <!-- <th><h3>Score</h3></th> -->
       </tr>
     </thead>
     <tbody>
@@ -37,27 +38,19 @@
           <h6 style="text-align: center">Unavailable</h6>
         </td>
         <td>
-          <h3 v-if="rankingValue === 'Rating'" style="font-weight: bold; text-align: center">
-            {{ game.average_rating || 0 }}/5
-          </h3>
-          <h3 v-else style="text-align: center">{{ game.average_rating || 0 }}/5</h3>
+          <h3 style="text-align: center">{{ game.average_rating || 0 }}/5</h3>
         </td>
         <td>
-          <h3 v-if="rankingValue === 'Time PLayed'" style="font-weight: bold; text-align: center">
-            {{ game.average_hours_played || 0 }}
-          </h3>
-          <h3 v-else style="text-align: center">{{ game.average_hours_played || 0 }}</h3>
+          <h3 style="text-align: center">{{ game.average_hours_played || 0 }}</h3>
         </td>
         <td>
-          <h3 v-if="rankingValue === 'Most Popular'" style="font-weight: bold; text-align: center">
-            {{ game.records_made || 0 }}
-          </h3>
-          <h3 v-else style="text-align: center">{{ game.records_made || 0 }}</h3>
+          <h3 style="text-align: center">{{ game.average_times_played || 0 }}</h3>
+        </td>
+        <td>
+          <h3 style="text-align: center">{{ game.records_made || 0 }}</h3>
         </td>
         <!-- <td>
-          <h3>
-            {{ score[index] }}
-          </h3>
+          <h3 style="text-align: center">{{ score[index] || 0 }}</h3>
         </td> -->
       </tr>
     </tbody>
@@ -65,33 +58,14 @@
 </template>
 
 <script setup>
-import { onMounted, ref, reactive } from 'vue'
-import { useRoute } from 'vue-router'
-import axios from 'axios'
-import { userState } from '@/UserData'
+import { onMounted, ref, reactive, defineProps } from 'vue'
 
-const route = useRoute()
-const username = route.params.username
-const userType = route.params.userType
-const recommendations = ref([])
-const score = ref([])
-
-async function getRecommendations() {
-  try {
-    const userRecommendations = await axios.get(
-      `http://localhost:5000/get/${userType}/${username}/recommendations`,
-    )
-    console.log(userRecommendations.data)
-    recommendations.value = userRecommendations.data.recommendations.map((rec) => rec.game)
-    score.value = userRecommendations.data.recommendations.map((rec) => rec.finalScore)
-  } catch (error) {
-    console.log(`Error getting recommendations ${error}`)
-  }
-}
-
-onMounted(() => {
-  getRecommendations()
+const props = defineProps({
+  recommendations: { type: [Object], default: [] },
 })
+
+const recommendations = props.recommendations.map((rec) => rec.game)
+const score = props.recommendations.map((rec) => rec.finalScore)
 </script>
 
 <style scoped></style>

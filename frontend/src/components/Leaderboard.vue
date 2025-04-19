@@ -8,7 +8,7 @@
           <th><h3>Cover</h3></th>
           <th><h3>Rating</h3></th>
           <th><h3>Hours Played</h3></th>
-          <th><h3>Revists</h3></th>
+          <th><h3>Revisits</h3></th>
           <th><h3>Records</h3></th>
         </tr>
       </thead>
@@ -21,7 +21,7 @@
             <h3>
               <a
                 style="color: blue; text-decoration: none; text-align: start"
-                :href="`http://localhost:5173/game/${game.id}`"
+                :href="`${frontendUrl}/game/${game.id}`"
                 >{{ game.name }}</a
               >
             </h3>
@@ -36,6 +36,7 @@
               @load="imagesLoaded[index] = true"
             />
             <h3 v-if="!imagesLoaded[index]" style="text-align: center">Loading Image</h3>
+            <!-- {{ imagesLoaded[index] }} -->
           </td>
           <td v-else>
             <h6 style="text-align: center">Unavailable</h6>
@@ -74,14 +75,11 @@
           <td>
             <h3>{{ game.index + 1 }}</h3>
           </td>
-          <!-- {{
-            game
-          }} -->
           <td>
             <h3>
               <a
                 style="color: blue; text-decoration: none; text-align: start"
-                :href="`http://localhost:5173/game/${game.game.id}`"
+                :href="`${frontendUrl}/game/${game.game.id}`"
                 >{{ game.game.name }}</a
               >
             </h3>
@@ -131,12 +129,11 @@
       </tbody>
     </table>
 
-    <div v-else style="align-self: center; justify-self: center" class="horizontal-container">
+    <div v-else style="display: flex; align-self: center; justify-self: center">
       <h3 for="loading">Leaderboard Loading</h3>
       <img src="../assets/loading.gif" alt="Loading..." class="loading-icon" id="loading" />
     </div>
 
-    <!-- {{ rankingValue }} -->
     <div class="vertical-sticky-container">
       <LeaderboardSearch
         v-if="!leaderboardLoading"
@@ -148,6 +145,7 @@
         v-if="!leaderboardLoading"
         style="width: 100%"
         class="shadowed"
+        :rankValue="rankingValue"
         @change-ranking="changeCriteria"
       />
       <CatergoryFilter
@@ -198,6 +196,8 @@ const maxRevisitsValue = ref(0)
 const maxRecordsValue = ref(0)
 const leaderboardLoading = ref(true)
 const completeLeaderboard = ref([])
+const backendUrl = import.meta.env.VITE_BACKEND_URL
+const frontendUrl = import.meta.env.VITE_FRONTEND_URL
 const changeCriteria = (criteria) => {
   rankingValue.value = criteria
   location.reload()
@@ -251,10 +251,9 @@ async function getFilteredLeaderboard(filters) {
     } else if (rankingValue.value === 'Most Popular') {
       urlCriteria = 'records_made'
     }
-    const leaderboardResponse = await axios.get(
-      `http://localhost:5000/leaderboard/${urlCriteria}`,
-      { params: filters },
-    )
+    const leaderboardResponse = await axios.get(`${backendUrl}/leaderboard/${urlCriteria}`, {
+      params: filters,
+    })
     console.log(leaderboardResponse.data.leaderboard)
     leaderboard.value = leaderboardResponse.data.leaderboard
     leaderboardLength.value = leaderboard.value.length
@@ -276,29 +275,28 @@ async function getCompleteLeaderboard() {
       urlCriteria = 'average_hours_played'
     } else if (rankingValue.value === 'Most Popular') {
       urlCriteria = 'records_made'
+    } else if (rankingValue.value === 'Revisits') {
+      urlCriteria = 'average_times_played'
     }
-    const leaderboardResponse = await axios.get(
-      `http://localhost:5000/leaderboard/${urlCriteria}`,
-      { params: {} },
-    )
+    const leaderboardResponse = await axios.get(`${backendUrl}/leaderboard/${urlCriteria}`, {
+      params: {},
+    })
     leaderboard.value = leaderboardResponse.data.leaderboard
-
+    completeLeaderboard.value = leaderboardResponse.data.leaderboard
     maxHoursValue.value = leaderboard.value.reduce((max, game) => {
-      const hours =
-        typeof game.average_hours_played === 'number' ? game.average_hours_played : -Infinity
+      const hours = typeof game.average_hours_played === 'number' ? game.average_hours_played : 0
       return Math.max(max, hours)
-    }, -Infinity)
+    }, 0)
 
     maxRecordsValue.value = leaderboard.value.reduce((max, game) => {
-      const records = typeof game.records_made === 'number' ? game.records_made : -Infinity
+      const records = typeof game.records_made === 'number' ? game.records_made : 0
       return Math.max(max, records)
-    }, -Infinity)
+    }, 0)
 
     maxRevisitsValue.value = leaderboard.value.reduce((max, game) => {
-      const revisits =
-        typeof game.average_times_played === 'number' ? game.average_times_played : -Infinity
+      const revisits = typeof game.average_times_played === 'number' ? game.average_times_played : 0
       return Math.max(max, revisits)
-    }, -Infinity)
+    }, 0)
     leaderboardLength.value = leaderboard.value.length
     leaderboardLoading.value = false
   } catch (error) {
@@ -334,9 +332,9 @@ onMounted(() => {
   background-color: rgb(0, 0, 0, 0);
   padding: 10px;
   border-radius: 5px;
-  z-index: 100;
+  z-index: 50;
   width: 17%;
-  row-gap: 10px;
+  row-gap: 5px;
   margin-left: 50px;
 }
 

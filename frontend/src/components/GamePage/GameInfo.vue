@@ -91,16 +91,15 @@
           >
             Edit your comment
           </button>
+          <button
+            v-if="userState.loggedIn"
+            style="min-width: 100%"
+            class="normal-button"
+            @click="emit('change-favourite')"
+          >
+            Favourite
+          </button>
         </div>
-
-        <button
-          v-if="userState.loggedIn"
-          style="min-width: 100%"
-          class="normal-button"
-          @click="emit('change-favourite')"
-        >
-          Favourite
-        </button>
       </div>
     </div>
   </div>

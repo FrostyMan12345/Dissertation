@@ -1,7 +1,7 @@
 <template>
-  <div>
+  <div v-if="Object.values(favouriteGames).slice(0, 3).length > 0">
     <h2>Favourite Games</h2>
-    <!-- {{ Object.values(userState.favouriteGames).slice(0, 3) }} -->
+    <!-- {{ Object.values(favouriteGames).slice(0, 3) }} -->
 
     <table>
       <thead>
@@ -9,9 +9,6 @@
           <th><h4>Ranking</h4></th>
           <th><h4>Game</h4></th>
           <th><h4>Cover</h4></th>
-          <!-- <th><h3>Rating</h3></th>
-        <th><h3>Hours Played</h3></th>
-        <th><h3>Records</h3></th> -->
         </tr>
       </thead>
       <tbody>
@@ -24,13 +21,14 @@
             <h4>{{ index + 1 }}</h4>
           </td>
           <td>
-            <h3>
+            <h3 v-if="game.name !== 'Not Selected'">
               <a
                 style="color: blue; text-decoration: none; text-align: start"
                 :href="`http://localhost:5173/game/${game.id}`"
-                >{{ game.id }}</a
+                >{{ game.name }}</a
               >
             </h3>
+            <h3 v-else>Not Selected</h3>
           </td>
           <td>
             <img

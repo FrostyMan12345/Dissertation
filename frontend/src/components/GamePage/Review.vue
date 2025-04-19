@@ -2,8 +2,7 @@
   <div class="review">
     <div class="horizontal-container">
       <h4>
-        <!-- <p>{{ userData }}</p> -->
-        <a :href="`http://localhost:5173/profile/${userData.userType}/${reviewInfo?.username}`">{{
+        <a :href="`${frontendUrl}/profile/${userData.user_type}/${reviewInfo?.username}`">{{
           reviewInfo?.username
         }}</a>
       </h4>
@@ -79,6 +78,8 @@ const reactionUpdated = ref(false)
 const rating = props.rating
 const route = useRoute()
 const gameId = route.params.id
+const backendUrl = import.meta.env.VITE_BACKEND_URL
+const frontendUrl = import.meta.env.VITE_FRONTEND_URL
 const isDisabled = ref(false)
 const handleButton = () => {
   isDisabled.value = true
@@ -135,17 +136,14 @@ function dislikeReview() {
 async function updateReaction(newReaction, newLikes, newDislikes) {
   try {
     console.log(newReaction)
-    const response = await axios.post(
-      `http://localhost:5000/game/${gameId}/review/reaction/update`,
-      {
-        reaction: newReaction,
-        newLikes,
-        newDislikes,
-        userState,
-        reactedPrior: hasReacted.value,
-        reviewId: props.reviewInfo.review_id,
-      },
-    )
+    const response = await axios.post(`${backendUrl}/game/${gameId}/review/reaction/update`, {
+      reaction: newReaction,
+      newLikes,
+      newDislikes,
+      userState,
+      reactedPrior: hasReacted.value,
+      reviewId: props.reviewInfo.review_id,
+    })
     reaction.value = newReaction
     likes.value = newLikes
     dislikes.value = newDislikes

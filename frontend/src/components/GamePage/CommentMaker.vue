@@ -46,9 +46,9 @@ const emit = defineEmits(['modal-exit'])
 const target = ref(null)
 const commentContent = ref(props.comment.value?.comment || '')
 const commentj = computed(() => props.comment?.comment !== '')
-// const reactions = ref(props.comment.reactions)
 const route = useRoute()
 const gameId = route.params.id
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 onClickOutside(target, () => emit('modal-exit'))
 
@@ -57,7 +57,7 @@ async function createComment() {
     console.log(userState)
     console.log(commentContent.value)
 
-    let response = await axios.post(`http://localhost:5000/game/${gameId}/comment/make`, {
+    let response = await axios.post(`${backendUrl}/game/${gameId}/comment/make`, {
       userState,
       comment: {
         comment: commentContent.value,
@@ -92,7 +92,7 @@ async function editComment() {
     console.log(props?.comment?.value?.comments[0].created)
     console.log(props?.comment?.value?.comments[0]?.comment_id)
     console.log(editTime)
-    let response = await axios.post(`http://localhost:5000/game/${gameId}/comment/edit`, {
+    let response = await axios.post(`${backendUrl}/game/${gameId}/comment/edit`, {
       userState,
       comment: {
         comment: commentContent.value,

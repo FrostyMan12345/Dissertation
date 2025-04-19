@@ -21,6 +21,8 @@
 </template>
 
 <script setup>
+document.title = 'GameRecords'
+
 function goToLogin() {
   window.location.href = '/login'
 }

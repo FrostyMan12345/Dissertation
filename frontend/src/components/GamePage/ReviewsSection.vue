@@ -75,6 +75,7 @@ const route = useRoute()
 const gameId = route.params.id
 const reviewsReacted = reactive({})
 const commentsReacted = reactive({})
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 async function getReacted() {
   if (!userState.loggedIn || userState.developer) {
@@ -82,22 +83,16 @@ async function getReacted() {
   }
   console.log(`UserId: ${userState.userId}`)
   try {
-    const reviewResponse = await axios.get(
-      `http://localhost:5000/game/${gameId}/record/reaction/get`,
-      {
-        params: {
-          userId: userState.userId,
-        },
+    const reviewResponse = await axios.get(`${backendUrl}/game/${gameId}/record/reaction/get`, {
+      params: {
+        userId: userState.userId,
       },
-    )
-    const commentResponse = await axios.get(
-      `http://localhost:5000/game/${gameId}/comment/reaction/get`,
-      {
-        params: {
-          userId: userState.userId,
-        },
+    })
+    const commentResponse = await axios.get(`${backendUrl}/game/${gameId}/comment/reaction/get`, {
+      params: {
+        userId: userState.userId,
       },
-    )
+    })
     Object.assign(reviewsReacted, reviewResponse.data.reviews)
     Object.assign(commentsReacted, commentResponse.data.comments)
     console.log(commentResponse.data.comments)

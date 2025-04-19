@@ -7,7 +7,7 @@
       style="width: 100%"
       @focus="searchIsFocused = true"
       @blur="handleBlur"
-      @input="search(input)"
+      @keyup.enter="search(input)"
       class="search-bar"
     />
     <p>Enter at least 3 character to search</p>
@@ -24,11 +24,12 @@ const input = ref('')
 const searchIsFocused = ref(false)
 const filteredGames = ref([])
 const emit = defineEmits([`change-leaderboard`])
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 async function filteredSearch() {
   try {
     const response = await axios
-      .get('http://localhost:5000/search/games', {
+      .get(`${backendUrl}/search/games`, {
         params: { query: input.value, limit: 0, sort: 0 },
       })
       .catch((error) => {
@@ -82,7 +83,7 @@ function handleBlur() {
   top: 100%;
   left: 0;
   right: 0;
-  z-index: 10;
+  z-index: 75;
   background-color: white;
   border: 1px solid #ccc;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);

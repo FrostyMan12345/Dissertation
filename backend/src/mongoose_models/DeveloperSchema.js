@@ -8,9 +8,6 @@ const devSchema = new mongoose.Schema(
     dev_comments: [
       {
         game_id: { type: mongoose.Schema.Types.ObjectId, ref: "Game" },
-        // comment: { type: String },
-        // likes: { type: Number },
-        // dislikes: { type: Number },
         comment_id: { type: mongoose.Schema.Types.ObjectId },
         created: { type: Number },
         edited: { type: Number, defualt: 0 },

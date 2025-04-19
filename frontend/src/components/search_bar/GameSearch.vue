@@ -35,11 +35,12 @@ const input = ref('')
 const searchIsFocused = ref(false)
 const gamesList = ref([])
 const filteredGames = ref([])
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 async function filteredSearch() {
   try {
     const response = await axios
-      .get('http://localhost:5000/search/games', {
+      .get(`${backendUrl}/search/games`, {
         params: { query: input.value, limit: 10, sort: 1 },
       })
       .catch((error) => {
@@ -81,7 +82,9 @@ function goToGame(id) {
 
 <style scoped>
 .horizontal-container {
+  display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .search-container {

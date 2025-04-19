@@ -2,18 +2,23 @@
   <header>
     <button @click="goToMainPage"><h1>GameRecords</h1></button>
 
-    <button @click="goToLoginPage">
-      <img src="../assets/home_icon.png" alt="Home" class="header-button" />
-    </button>
     <GameSearch />
     <UserSearch />
-    <!-- <p>{{ userState }}</p> -->
-    <button v-if="userState.loggedIn" @click="goToProfilePage">
-      <ProfilePicture :header="true" />
-    </button>
-    <button v-else @click="goToLoginPage">
-      <ProfilePicture :header="true" />
-    </button>
+    <div style="display: flex; align-items: center">
+      <button
+        class="normal-button"
+        v-if="userState.loggedIn && userState.admin"
+        @click="goToRequests"
+      >
+        Requests
+      </button>
+      <button v-if="userState.loggedIn" @click="goToProfilePage">
+        <ProfilePicture :header="true" />
+      </button>
+      <button v-else @click="goToLoginPage">
+        <ProfilePicture :header="true" />
+      </button>
+    </div>
   </header>
 </template>
 
@@ -26,12 +31,15 @@ import ProfilePicture from './ProfilePicture.vue'
 import { userState } from '@/UserData'
 
 function goToProfilePage() {
-  // router.push(`/profile/${userState.userType}/${userState.username}`)
   window.location.href = `/profile/${userState.userType}/${userState.username}`
 }
 
 function goToLoginPage() {
   router.push('/login')
+}
+
+function goToRequests() {
+  router.push('/developer/requests')
 }
 
 function goToMainPage() {

@@ -19,7 +19,7 @@
     </div>
   </div>
   <div v-else>
-    <h1>You do not have access to this site</h1>
+    <h1>You do not have access to this page</h1>
   </div>
 </template>
 
@@ -66,7 +66,6 @@ function removeRequest(requestId) {
 async function getAllCompanies() {
   try {
     const companyResponse = await axios.get(`${backendUrl}/companies`)
-    // companies.value = companyResponse.data.companies
     console.log(companies.value)
     companyResponse.data.companies.forEach((company) => {
       companies.value.push(company.name)
@@ -84,6 +83,7 @@ function goToMainPage() {
 }
 
 onMounted(() => {
+  document.title = 'Requests - GameRecords'
   getRequests()
   getAllCompanies()
 })

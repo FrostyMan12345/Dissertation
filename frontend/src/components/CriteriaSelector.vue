@@ -21,6 +21,9 @@
         value="Play Time"
       />
       <label for="play time" margin-left="10px">Play Time</label><br />
+      <input type="radio" v-model="chosenCriteria" id="revisits" name="criteria" value="Revisits" />
+      <label for="revisits" margin-left="10px">Revisits</label><br />
+      <hr />
       <button class="normal-button" type="submit">Change Criteria</button>
     </form>
   </div>

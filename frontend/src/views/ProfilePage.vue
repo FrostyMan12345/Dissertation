@@ -1,5 +1,5 @@
 <template>
-  <div class="horizontal-container">
+  <div style="align-items: center; gap: 10px" class="horizontal-container">
     <label
       v-if="userState.username == username && userState.userType == userType"
       class="profile-upload"
@@ -53,11 +53,7 @@
           >
             Game Play Time
           </button>
-          <!-- <button @click="dataset = keywordData">Keywords</button> -->
         </div>
-        <!-- {{ dataset }}
-      {{ averageRating }} -->
-        <!-- {{ dataset }} -->
         <div v-if="dataset.length !== 0">
           <VueUiVerticalBar
             v-if="dataRetrieved"
@@ -81,12 +77,26 @@
       <h3>Developer Account Representing:</h3>
       <h3 v-for="company in companies">- {{ company }}</h3>
     </div>
-    <div v-if="username === userState.username && !userState.developer">
+    <div v-if="username === userState.username && !userState.developer && gameRecords.length < 5">
+      <h3>Create at least 5 records to start recieving recommendations</h3>
+    </div>
+    <div v-else-if="username === userState.username && !userState.developer">
       <div style="align-items: center; justify-content: center; gap: 10px 10px">
         <input type="checkbox" v-model="showRecommendations" id="recommendations" />
         <label style="margin " for="recommendations">Show Game recommendations</label>
       </div>
-      <RecommendationsDisplay v-if="showRecommendations" />
+      <RecommendationsDisplay
+        v-if="showRecommendations && loadedRecommendations"
+        :recommendations="recommendations"
+      />
+      <div
+        v-else-if="showRecommendations && !loadedRecommendations"
+        style="align-self: center; justify-self: center"
+        class="horizontal-container"
+      >
+        <h3 for="loading">Recommendations loading</h3>
+        <img src="../assets/loading.gif" alt="Loading..." class="loading-icon" id="loading" />
+      </div>
     </div>
   </div>
 </template>
@@ -123,7 +133,11 @@ const updatingImage = ref(false)
 const dataset = ref([])
 const favouriteGames = ref({})
 const companies = ref([])
+const loadedRecommendations = ref(false)
 const showRecommendations = ref(false)
+const recommendations = ref([])
+const backendUrl = import.meta.env.VITE_BACKEND_URL
+// const backendUrl = 'http://localhost:5000'
 const chartTitle = ref('Genres')
 const chartSubtitle = ref('')
 const config = reactive({
@@ -364,7 +378,7 @@ async function uploadFile() {
   console.log(userState.profilePicture)
   try {
     const response = await axios.post(
-      `http://localhost:5000/user/${userState.userType}/${userState.userId}/update-image`,
+      `${backendUrl}/user/${userState.userType}/${userState.userId}/update-image`,
       formData,
     )
     console.log(response.data.image)
@@ -379,9 +393,7 @@ async function uploadFile() {
 async function getUserData() {
   try {
     console.log(userType, username)
-    const response = await axios.get(`http://localhost:5000/get/${userType}/${username}`)
-    console.log('bvjuevbuhdsdbvefhv hfvbvljh fbeduv sa')
-    console.log(response.data)
+    const response = await axios.get(`${backendUrl}/get/${userType}/${username}`)
     userId.value = response.data.user._id
     profileImage.value = response.data.user.image
     gameRecords.value = response.data.user?.games_played
@@ -442,19 +454,6 @@ function parseGameAnalytics(gameData) {
       totalRating = totalRating + game.rating
     })
     averageRating.value = totalRating / gameData.length
-
-    // Object.entries(genreCount).forEach(([genre, count]) => {
-    //   genreData.value.push({ name: genre, values: [count] })
-    // })
-    // Object.entries(themeCount).forEach(([theme, count]) => {
-    //   themeData.value.push({ name: theme, values: [count] })
-    // })
-    // Object.entries(genrePlayTime).forEach(([genre, hours]) => {
-    //   genrePlayTimeData.value.push({ name: genre, values: [hours] })
-    // })
-    // Object.entries(themePlayTime).forEach(([theme, hours]) => {
-    //   themePlayTimeData.value.push({ name: theme, values: [hours] })
-    // })
     Object.entries(genreCount).forEach(([genre, count]) => {
       genreData.value.push({ name: genre, value: count })
     })
@@ -467,26 +466,40 @@ function parseGameAnalytics(gameData) {
     Object.entries(themePlayTime).forEach(([theme, hours]) => {
       themePlayTimeData.value.push({ name: theme, value: hours })
     })
-    // console.log(ratingCount)
     for (var count = 0; count < 5; count = count + 0.1) {
-      // console.log(parseFloat(count.toFixed(1)))
       ratingData.value.push({
         period: `${count.toFixed(1)} Stars`,
         value: ratingCount[parseFloat(count.toFixed(1))] || 0,
       })
     }
-    // console.log(ratingData.value)
     Object.entries(ratingCount).forEach((rating, count) => {})
     dataset.value = genreData.value
   } else {
     dataset.value = []
   }
-  // console.log(dataset.value)
   dataRetrieved.value = true
+}
+
+async function getRecommendations() {
+  if (username === userState.username && !userState.developer && gameRecords.value.length < 5) {
+    try {
+      loadedRecommendations.value = false
+      const userRecommendations = await axios.get(
+        `${backendUrl}/get/${userType}/${username}/recommendations`,
+      )
+      console.log(userRecommendations.data)
+      recommendations.value = userRecommendations.data.recommendations
+      loadedRecommendations.value = true
+    } catch (error) {
+      console.log(`Error getting recommendations ${error}`)
+    }
+  }
 }
 
 onMounted(() => {
   getUserData()
+  getRecommendations()
+  document.title = `${username} - GameRecords`
 })
 </script>
 
@@ -516,8 +529,10 @@ input[type='checkbox'] {
   justify-content: space-around;
   align-self: center;
 }
-/* .profile-picture {
-  width: 100px;
-  height: 100px;
-} */
+
+.loading-icon {
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+}
 </style>

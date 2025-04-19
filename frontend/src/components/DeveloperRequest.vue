@@ -5,8 +5,6 @@
       <h5 style="white-space: nowrap">Username: {{ username }}</h5>
       <h6>Message:</h6>
       <p>{{ request }}</p>
-
-      <!-- {{ companies.slice(0, 10) }} -->
     </div>
     <div class="selection">
       {{ selectedCompanies }}
@@ -20,8 +18,8 @@
     </div>
     <input v-model="rejectionReasoning" type="textarea" placeholder="Rejection reasoning" />
     <div class="button-container">
-      <button class="accept-button" @click="verifyAccount(1)">Accept</button>
-      <button class="reject-button" @click="verifyAccount(-1)">Reject</button>
+      <button class="accept-button" @click="verifyAccount(1)">Verify</button>
+      <button class="reject-button" @click="verifyAccount(-1)">Deny</button>
     </div>
   </div>
 </template>

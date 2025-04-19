@@ -2,8 +2,7 @@ import azure.functions as func
 import datetime
 import json
 import logging
-import os
-from dotenv import load_dotenv
+import ossaudiodev
 from pymongo import MongoClient, IndexModel, ASCENDING, DESCENDING
 from itertools import islice
 
@@ -11,20 +10,15 @@ from dataFunctions import *
 
 app = func.FunctionApp()
 
-client = MongoClient('mongodb+srv://rm8g22:YVFDtnZZT7k7m2aH@rm8g22-project-database.xkyqq.mongodb.net/Third_Year_Project?retryWrites=true&w=majority&connectTimeoutMS=600000&maxPoolSize=50&socketTimeoutMS=600000&appName=rm8g22-project-database')
+client = MongoClient(os.environ['MongoDBConnectionURL'])
 db = client["Third_Year_Project"] 
 gameCollection = db["Games"] 
 companiesCollection = db["Companies"]
 
-# Load environment variables from the .env file located one directory up
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 os.environ['TWITCH_ACCESS'] = refreshAccess()
-
-
 
 @app.timer_trigger(schedule="0 0 0 * * *", arg_name="myTimer", run_on_startup=False, use_monitor=False)
 def update_Database(myTimer: func.TimerRequest) -> None:
-    logging.info(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
     if myTimer.past_due:
         logging.info('The timer is past due!')
     
@@ -42,7 +36,7 @@ def update_Database(myTimer: func.TimerRequest) -> None:
 @app.route(route="credentials/get", methods=[func.HttpMethod.GET],auth_level=func.AuthLevel.FUNCTION)
 def get_credentials(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Get credentials triggered')
-    access = os.getenv('TWITCH_ACCESS')
+    access = os.environ['TWITCH_ACCESS']
     return func.HttpResponse(body=json.dumps({"ACCESS": access}),mimetype="application/json")
 
 
@@ -51,7 +45,7 @@ def get_credentials(req: func.HttpRequest) -> func.HttpResponse:
 def refresh_credentials(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Refresh credentials triggered')
     os.environ['TWITCH_ACCESS'] = refreshAccess()
-    access = os.getenv('TWITCH_ACCESS')
+    access = os.environ['TWITCH_ACCESS']
     return func.HttpResponse(body=json.dumps({"ACCESS": access}),mimetype="application/json")
 
 
@@ -66,8 +60,8 @@ def get_count_db(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.route(route="db/game/setup", methods=[func.HttpMethod.GET],auth_level=func.AuthLevel.ADMIN)
 def get_new_game_db(req: func.HttpRequest) -> func.HttpResponse:
-    gameCollection.delete_many({})
     try:
+        gameCollection.delete_many({})
         db = getCompleteGameDatabase()
         it = iter(db)  
         slices = [list(islice(it, 30000)) for _ in range((len(db) + 30000 - 1) // 30000)]
@@ -95,10 +89,8 @@ def get_new_comapnies_db(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(body=json.dumps({"msg": f"Database setup with {companiesCollection.count_documents({})} items"}),mimetype="application/json")
 
 
-
-@app.route(route="image", methods=[func.HttpMethod.GET],auth_level=func.AuthLevel.ADMIN)
-def get_cover_id(req: func.HttpRequest) -> func.HttpResponse:
-    # input = req.get_json()
-    coverId = req.params.get('coverId')
-    return func.HttpResponse(body=json.dumps({"id": getAssociatedImage(coverId)}))
+# @app.route(route="image", methods=[func.HttpMethod.GET],auth_level=func.AuthLevel.ADMIN)
+# def get_cover_id(req: func.HttpRequest) -> func.HttpResponse:
+#     coverId = req.params.get('coverId')
+#     return func.HttpResponse(body=json.dumps({"id": getAssociatedImage(coverId)}))
         

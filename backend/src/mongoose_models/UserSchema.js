@@ -23,6 +23,8 @@ const userSchema = new mongoose.Schema(
           required: false,
         },
       },
+      default: { first: null, second: null, thrid: null },
+      required: true,
     },
     games_played: [
       {

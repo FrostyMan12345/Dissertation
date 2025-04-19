@@ -4,10 +4,12 @@
       <div class="modal-container" ref="target">
         <h1>Add {{ game.gameTitle }} to your favouirte games?</h1>
         <p>Choose a slot to place this game in:</p>
-        {{ game._id }}
         <div class="vertical-container">
-          <button class="favourite-changer" @click="changeFavourite(0)">
-            <p>1. {{ userState.favouriteGames.first?.name }}</p>
+          <button class="normal-button" @click="changeFavourite(0)">
+            <p v-if="userState.favouriteGames.first?.name">
+              1. {{ userState.favouriteGames.first?.name }}
+            </p>
+            <p v-else>1. Not Selected</p>
             <img
               v-if="userState.favouriteGames.first?.cover?.image_id !== undefined"
               :src="`https://images.igdb.com/igdb/image/upload/t_micro/${userState.favouriteGames.first?.cover?.image_id}.jpg`"
@@ -16,8 +18,11 @@
               crossorigin="anonymous"
             />
           </button>
-          <button class="favourite-changer" @click="changeFavourite(1)">
-            <p>2. {{ userState.favouriteGames.second?.name }}</p>
+          <button class="normal-button" @click="changeFavourite(1)">
+            <p v-if="userState.favouriteGames.second?.name">
+              2. {{ userState.favouriteGames.second?.name }}
+            </p>
+            <p v-else>2. Not Selected</p>
             <img
               v-if="userState.favouriteGames.second?.cover?.image_id"
               :src="`https://images.igdb.com/igdb/image/upload/t_micro/${userState.favouriteGames.second?.cover?.image_id}.jpg`"
@@ -26,8 +31,11 @@
               crossorigin="anonymous"
             />
           </button>
-          <button class="favourite-changer" @click="changeFavourite(2)">
-            <p>3. {{ userState.favouriteGames.third?.name }}</p>
+          <button class="normal-button" @click="changeFavourite(2)">
+            <p v-if="userState.favouriteGames.third?.name">
+              3. {{ userState.favouriteGames.third?.name }}
+            </p>
+            <p v-else>3. Not Selected</p>
             <img
               v-if="userState.favouriteGames.third?.cover?.image_id"
               :src="`https://images.igdb.com/igdb/image/upload/t_micro/${userState.favouriteGames.third?.cover?.image_id}.jpg`"
@@ -59,16 +67,17 @@ const emit = defineEmits(['modal-exit'])
 const target = ref(null)
 const route = useRoute()
 const gameId = route.params.id
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 onClickOutside(target, () => emit('modal-exit'))
 
 async function changeFavourite(index) {
   console.log(
-    `http://localhost:5000/set/${userState.userType}/${userState.username}/favourites/${props.game._id}/${index}`,
+    `${backendUrl}/set/${userState.userType}/${userState.username}/favourites/${props.game._id}/${index}`,
   )
   try {
     const favoruiteChangeRequest = await axios.post(
-      `http://localhost:5000/set/${userState.userType}/${userState.username}/favourites/${props.game._id}/${index}`,
+      `${backendUrl}/set/${userState.userType}/${userState.username}/favourites/${props.game._id}/${index}`,
       userState,
     )
     console.log(favoruiteChangeRequest.data)
@@ -77,10 +86,6 @@ async function changeFavourite(index) {
     console.log(error)
   }
 }
-
-// onMounted(() => {
-//   getFavouriteGames()
-// })
 </script>
 
 <style scoped>
@@ -106,28 +111,17 @@ async function changeFavourite(index) {
 }
 
 .vertical-container {
+  width: 100%;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
   flex-direction: column;
   gap: 20px;
 }
 
 button {
+  width: 100%;
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  justify-items: center;
-  color: rgb(0, 0, 0);
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0);
-  border: solid 1px blue;
-  padding: 5px;
   gap: 10px;
-}
-
-button:hover {
-  background-color: rgb(0, 187, 255);
+  padding: 5px;
 }
 </style>

@@ -11,7 +11,6 @@ import FavouriteChanger from '@/components/GamePage/FavouriteChanger.vue'
 import CommentMaker from '@/components/GamePage/CommentMaker.vue'
 
 const game = reactive(new Game())
-const imageID = ref(0)
 const route = useRoute()
 const gameId = route.params.id
 const hasLogged = ref(null)
@@ -23,23 +22,21 @@ const recordPopup = ref(false)
 const favouritePopup = ref(false)
 const canComment = ref(false)
 const editing = ref(false)
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 async function getGameData() {
   try {
-    const response = await axios.get(`http://localhost:5000/game/${gameId}/data`)
+    const response = await axios.get(`${backendUrl}/game/${gameId}/data`)
     const gameInfo = response.data
     Object.assign(game, Game.gameFromObject(gameInfo))
-    console.log(game)
+    document.title = `${game.gameTitle} - GameRecords`
     if (!userState.developer && userState.loggedIn) {
-      const hasLoggedResponse = await axios.get(
-        `http://localhost:5000/game/${gameId}/record/check`,
-        {
-          params: {
-            userId: userState.userId,
-          },
+      const hasLoggedResponse = await axios.get(`${backendUrl}/game/${gameId}/record/check`, {
+        params: {
+          userId: userState.userId,
         },
-      )
-      const logGet = await axios.get(`http://localhost:5000/game/${gameId}/record/get`, {
+      })
+      const logGet = await axios.get(`${backendUrl}/game/${gameId}/record/get`, {
         params: {
           userId: userState.userId,
         },
@@ -50,15 +47,12 @@ async function getGameData() {
       loggedRating.value = logGet.data.logData[0].rating
       hasLogged.value = hasLoggedResponse.data.logged
     } else if (userState.developer && userState.loggedIn) {
-      const hasLoggedResponse = await axios.get(
-        `http://localhost:5000/game/${gameId}/comment/check`,
-        {
-          params: {
-            userId: userState.userId,
-          },
+      const hasLoggedResponse = await axios.get(`${backendUrl}/game/${gameId}/comment/check`, {
+        params: {
+          userId: userState.userId,
         },
-      )
-      const logGet = await axios.get(`http://localhost:5000/game/${gameId}/comment/get`, {
+      })
+      const logGet = await axios.get(`${backendUrl}/game/${gameId}/comment/get`, {
         params: {
           userId: userState.userId,
         },
@@ -70,7 +64,6 @@ async function getGameData() {
     } else {
       hasLogged.value = []
     }
-    // console.log(logGet.data.logData[0])
   } catch (error) {
     console.error('Error fetching game and log data:', error)
     hasLogged.value = false
@@ -113,7 +106,6 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- {{ canComment }} -->
   <GameInfo
     v-if="hasLogged !== null"
     :game="game"

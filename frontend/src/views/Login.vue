@@ -13,7 +13,7 @@ const passwordConfirm = ref('')
 const email = ref('')
 const requests = ref('')
 const backendUrl = import.meta.env.VITE_BACKEND_URL
-
+document.title = 'Login and Register - GameRecords'
 function validateCredentials(username, password) {
   try {
     if (username.length >= 5 && password.length <= 12) {
@@ -30,13 +30,12 @@ function validateCredentials(username, password) {
   }
 }
 
-async function accountLogin(username, password) {
+async function accountLogin(username, password, email = '') {
   try {
-    const response = await axios.get(`${backendUrl}/login/${loginType.value}`, {
-      params: {
-        username,
-        password,
-      },
+    const response = await axios.post(`${backendUrl}/login/${loginType.value}`, {
+      username: username,
+      password: password,
+      email: email,
     })
     console.log(response.data)
     const id = response.data.userId
@@ -109,7 +108,7 @@ async function accountRegister(username, password, passwordConfirm, email, reque
         console.log(loginType.value)
         switch (loginType.value) {
           case 'user':
-            userState.loginUser(id, username, null)
+            userState.loginUser(id, username, null, [null, null, null])
             goToMainPage()
             toast('Register Success', {
               position: 'bottom-right',
@@ -119,7 +118,7 @@ async function accountRegister(username, password, passwordConfirm, email, reque
             })
             break
           case 'admin':
-            userState.loginAdmin(id, username, null)
+            userState.loginAdmin(id, username, null, [null, null, null])
             goToMainPage()
             toast('Register Success', {
               position: 'bottom-right',
@@ -209,7 +208,7 @@ function goToMainPage() {
 
     <hr />
 
-    <div v-if="!login && loginType === 'developer'" class="horizontal-container">
+    <div v-if="loginType === 'developer'" class="horizontal-container">
       <h3>Email:</h3>
       <input type="text" v-model="email" placeholder="Email Address" />
     </div>
@@ -237,7 +236,7 @@ function goToMainPage() {
     <button
       class="normal-button"
       v-if="login"
-      @click="accountLogin(username.trim(), password.trim())"
+      @click="accountLogin(username.trim(), password.trim(), email.trim())"
     >
       Sign In
     </button>
@@ -254,17 +253,17 @@ function goToMainPage() {
         )
       "
     >
-      Register New Account
+      Register
     </button>
 
     <hr />
 
     <button class="normal-button" v-if="login" @click="toggleLogin">Register New Account</button>
-    <button class="normal-button" v-else @click="toggleLogin">Sign In</button>
+    <button class="normal-button" v-else @click="toggleLogin">Sign In To Existing Account</button>
     <div class="horizontal-container" style="max-width: 25vw">
       <button class="normal-button" @click="changeLoginType('user')">User</button>
       <button v-if="login" class="normal-button" @click="changeLoginType('admin')">Admin</button>
-      <button class="normal-button" @click="changeLoginType('developer')">Developer</button>
+      <!-- <button class="normal-button" @click="changeLoginType('developer')">Developer</button> -->
     </div>
   </div>
 </template>

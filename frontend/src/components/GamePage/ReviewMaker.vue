@@ -11,15 +11,21 @@
         <div class="horizontal-container">
           <h3 style="margin-right: 72px">Revisits:</h3>
           <input
-            type="text"
-            style="width: 50px"
+            type="number"
+            style="width: 75px"
             placeholder="Number of playthroughs"
             v-model="timesPlayed"
           />
         </div>
+        <p style="font-size: 13px">(The number of replays/returns to the game if applicable)</p>
         <div class="horizontal-container">
           <h3>Hours Played:</h3>
-          <input type="text" style="width: 50px" placeholder="Hours Played" v-model="hoursPlayed" />
+          <input
+            type="number"
+            style="width: 75px"
+            placeholder="Hours Played"
+            v-model="hoursPlayed"
+          />
         </div>
         <div class="horizontal-container">
           <h3 for="checkbox">Would you like to write a review?</h3>
@@ -38,12 +44,14 @@
           <div v-else-if="makeReview && reviewContent.length > 250">
             <p class="error-message">Review is too long</p>
           </div>
+          <div v-else-if="typeof hoursPlayed !== 'number' || typeof timesPlayed !== 'number'">
+            <p class="error-message">Data provided are not numbers</p>
+          </div>
           <div v-else>
             <button v-if="!edit" @click.stop="logGameData">Submit</button>
             <button v-else @click.stop="editGameData">Submit</button>
           </div>
         </div>
-        <!-- <p>{{ reviewContent }}</p> -->
       </div>
     </div>
   </div>
@@ -76,6 +84,7 @@ const review = computed(() => props.review?.review_content !== '')
 const hoursPlayed = ref(props.hoursPlayed || 0)
 const timesPlayed = ref(props.timesPlayed || 0)
 const reactions = ref(props.review.reactions)
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 const route = useRoute()
 const gameId = route.params.id
 
@@ -93,7 +102,7 @@ async function logGameData() {
     }
 
     if (review.value && makeReview.value) {
-      response = await axios.post(`http://localhost:5000/game/${gameId}/record/make`, {
+      response = await axios.post(`${backendUrl}/game/${gameId}/record/make`, {
         userState,
         rating: rating.value,
         timesPlayed: timesPlayed.value,
@@ -111,7 +120,7 @@ async function logGameData() {
         game: props.game,
       })
     } else {
-      response = await axios.post(`http://localhost:5000/game/${gameId}/record/make`, {
+      response = await axios.post(`${backendUrl}/game/${gameId}/record/make`, {
         userState,
         rating: rating.value,
         timesPlayed: timesPlayed.value,
@@ -119,7 +128,7 @@ async function logGameData() {
         game: props.game,
       })
     }
-    const updateResponse = await axios.post(`http://localhost:5000/game/${gameId}/update`)
+    const updateResponse = await axios.post(`${backendUrl}/game/${gameId}/update`)
 
     const gameInfo = response.data
     console.log(gameInfo)
@@ -146,7 +155,7 @@ async function editGameData() {
       if (props?.review?.value?.created !== undefined) {
         editTime = Date.now()
       }
-      response = await axios.post(`http://localhost:5000/game/${gameId}/record/edit`, {
+      response = await axios.post(`${backendUrl}/game/${gameId}/record/edit`, {
         userState,
         rating: rating.value,
         timesPlayed: timesPlayed.value,
@@ -164,7 +173,7 @@ async function editGameData() {
         game: props.game,
       })
     } else {
-      response = await axios.post(`http://localhost:5000/game/${gameId}/record/edit`, {
+      response = await axios.post(`${backendUrl}/game/${gameId}/record/edit`, {
         userState,
         rating: rating.value,
         timesPlayed: timesPlayed.value,
@@ -175,7 +184,7 @@ async function editGameData() {
 
     const gameInfo = response.data
     console.log(gameInfo)
-    const updateResponse = await axios.post(`http://localhost:5000/game/${gameId}/update`)
+    const updateResponse = await axios.post(`${backendUrl}/game/${gameId}/update`)
     emit('modal-exit')
 
     location.reload()
@@ -204,5 +213,11 @@ async function editGameData() {
   background-color: #fff;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.33);
+}
+
+.horizontal-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 </style>

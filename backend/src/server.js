@@ -9,9 +9,6 @@ const Developer = require("./mongoose_models/DeveloperSchema");
 const Companies = require("./mongoose_models/CompanySchema");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
-const path = require("path");
-const FileSystem = require("fs");
-const { resolve } = require("path");
 const multer = require("multer");
 const { genreVector } = require("./genreVector");
 const { themeVector } = require("./themeVector");
@@ -23,8 +20,8 @@ const { validate } = require("deep-email-validator");
 
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
+  api_key: process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET,
 });
 
 const storage = new CloudinaryStorage({
@@ -37,19 +34,6 @@ const storage = new CloudinaryStorage({
     },
   },
 });
-
-// const transporter = nodemailer.createTransport({
-//   host: "smtp.office365.com",
-//   port: 587, // TLS port
-//   secure: false, // Use STARTTLS (not SSL)
-//   auth: {
-//     user: process.env.EMAIL, // New email address
-//     pass: process.env.EMAIL_PASSWORD, // New app password
-//   },
-//   tls: {
-//     rejectUnauthorized: false, // Optional: helps with SSL certificate issues
-//   },
-// });
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -65,18 +49,23 @@ const transporter = nodemailer.createTransport({
 const upload = multer({ storage });
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+app.options("*", cors());
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 
-const azureAPI = "http://localhost:7071/" || process.env.AZUREAPI;
-
 mongoose.set("debug", false);
 mongoose
   .connect(
-    process.env.MONGODB_URL ||
-      "mongodb+srv://rm8g22:YVFDtnZZT7k7m2aH@rm8g22-project-database.xkyqq.mongodb.net/Third_Year_Project?retryWrites=true&w=majority&appName=rm8g22-project-database",
+    process.env.MONGO_URL ||
+      "mongodb+srv://rm8g22:YVFDtnZZT7k7m2aH@rm8g22-project-database.xkyqq.mongodb.net/Third_Year_Project?retryWrites=true&w=majority&connectTimeoutMS=600000&maxPoolSize=50&socketTimeoutMS=600000&appName=rm8g22-project-database",
     {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -90,7 +79,9 @@ mongoose
   });
 
 const db = mongoose.connection;
-process.env.TWITCH_ACCESS = getCredentials();
+console.log(process.env);
+console.log(process.env.CLOUD_NAME);
+console.log(process.env.API_KEY);
 
 process.on("SIGINT", async () => {
   await mongoose.connection.close();
@@ -175,14 +166,10 @@ app.get("/game/:id/data", async (req, res) => {
       .lean();
 
     console.log(game);
-    // console.log("Raw game:", JSON.stringify(game, null, 2));
-    // console.log(await User.findOne({ _id: game.played_by[0].user_id }));
-    // console.log(await Admin.findOne({ _id: game.played_by[0].user_id }));
     if (!game) {
       return res.status(404).json({ message: "Game not found" });
     }
     game = parseGameData(game);
-    // console.log("Game Data:", game);
     if (game.played_by) {
       for (let record of game?.played_by) {
         if (record.user_type == "User") {
@@ -199,8 +186,8 @@ app.get("/game/:id/data", async (req, res) => {
   }
 });
 
-app.get("/login/user", async (req, res) => {
-  const { username, password } = req.query;
+app.post("/login/user", async (req, res) => {
+  const { username, password, email } = req.body;
   console.log(
     `Attempting login user with Username: ${username} and Password: ${password}`
   );
@@ -215,8 +202,8 @@ app.post("/register/user", async (req, res) => {
   return await registerAccount("Users", username, password, res);
 });
 
-app.get("/login/admin", async (req, res) => {
-  const { username, password } = req.query;
+app.post("/login/admin", async (req, res) => {
+  const { username, password, email } = req.body;
   console.log(
     `Attempting login admin with Username: ${username} and Password: ${password}`
   );
@@ -231,12 +218,12 @@ app.post("/register/admin", async (req, res) => {
   return await registerAccount("Admin", username, password, res);
 });
 
-app.get("/login/developer", async (req, res) => {
-  const { username, password } = req.query;
+app.post("/login/developer", async (req, res) => {
+  const { username, password, email } = req.body;
   console.log(
     `Attempting login developer with Username: ${username} and Password: ${password}`
   );
-  return await loginAccount("Developer", username, password, res);
+  return await loginAccount("Developer", username, password, res, email);
 });
 
 app.post("/register/developer", async (req, res) => {
@@ -322,7 +309,6 @@ app.post("/validations/:username/developer/:status", async (req, res) => {
       }
     } else {
       userInfo = await Developer.findOneAndDelete({ username: username });
-      // console.log(email);
       try {
         const mailSpecifications = {
           from: process.env.EMAIL,
@@ -392,8 +378,6 @@ app.post("/game/:id/record/make", async (req, res) => {
     schema = User;
     userType = "User";
   }
-  // console.log(review);
-  // console.log(userType);
   console.log(Object.keys(review).length === 0);
   const reviewId = new mongoose.Types.ObjectId();
   try {
@@ -449,8 +433,6 @@ app.post("/game/:id/record/make", async (req, res) => {
         },
       };
     }
-    // console.log(gamesPlayed);
-    // console.log(playedBy);
     const updateResponse = await Game.findOneAndUpdate({ id: id }, playedBy, {
       returnDocument: "after",
     });
@@ -490,8 +472,6 @@ app.post("/game/:id/record/edit", async (req, res) => {
     schema = User;
     userType = "User";
   }
-  // console.log(review);
-  // console.log(userType);
   console.log(Object.keys(review).length === 0);
   try {
     let playedBy = {};
@@ -574,7 +554,6 @@ app.post("/game/:id/comment/make", async (req, res) => {
     return;
   }
   console.log(comment);
-  // console.log(userType);
   console.log(Object.keys(comment).length === 0);
   const commentId = new mongoose.Types.ObjectId();
   try {
@@ -628,10 +607,9 @@ app.post("/game/:id/comment/edit", async (req, res) => {
   }
   console.log(comment);
   console.log("fnihebvihebvebafb");
-  // console.log(userType);
   try {
     let commentPush = {};
-    // let devUpdate = {};
+    let devUpdate = {};
     comment.dev_id = new mongoose.Types.ObjectId(userState.userId);
     comment.comment_id = new mongoose.Types.ObjectId(comment.comment_id);
     console.log(comment);
@@ -645,13 +623,10 @@ app.post("/game/:id/comment/edit", async (req, res) => {
       comment: comment.comment,
       reactions: comment.reactions,
     };
-    // devUpdate = {
-    //   game_id: comment.game_id,
-    //   comment_id: comment.comment_id
-    // };
-
-    // console.log(commentPush);
-    // console.log(devUpdate);
+    devUpdate = {
+      game_id: comment.game_id,
+      comment_id: comment.comment_id,
+    };
 
     const updateResponse = await Game.findOneAndUpdate(
       {
@@ -665,18 +640,18 @@ app.post("/game/:id/comment/edit", async (req, res) => {
       },
       { returnDocument: "after" }
     );
-    // const userResponse = await Developer.findOneAndUpdate(
-    //   {
-    //     _id: new mongoose.Types.ObjectId(userState.userId),
-    //     "games_played.game_id": new mongoose.Types.ObjectId(game._id),
-    //   },
-    //   {
-    //     $set: {
-    //       "games_played.$": devUpdate,
-    //     },
-    //   },
-    //   { returnDocument: "after" }
-    // );
+    const userResponse = await Developer.findOneAndUpdate(
+      {
+        _id: new mongoose.Types.ObjectId(userState.userId),
+        "dev_comments.game_id": new mongoose.Types.ObjectId(game._id),
+      },
+      {
+        $set: {
+          "dev_domments.$": devUpdate,
+        },
+      },
+      { returnDocument: "after" }
+    );
 
     res.status(200).json({ message: "Success", response: updateResponse });
   } catch (error) {
@@ -707,27 +682,27 @@ app.post("/game/:id/review/reaction/update", async (req, res) => {
           "played_by.$[played].review.likes": newLikes,
           "played_by.$[played].review.dislikes": newDislikes,
           "played_by.$[played].review.reactions.$[reactionItem].reaction":
-            reaction, // Target specific reaction
+            reaction,
         },
       };
       reactionResponse = await Game.findOneAndUpdate(
         {
-          id: id, // Match game ID
-          "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId), // Match review ID
+          id: id,
+          "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId),
           "played_by.review.reactions.user_id": new mongoose.Types.ObjectId(
             userState.userId
-          ), // Match reaction's user ID
+          ),
         },
         reactionUpdate,
         {
           arrayFilters: [
             {
-              "played.review.review_id": new mongoose.Types.ObjectId(reviewId), // Match review inside played_by
+              "played.review.review_id": new mongoose.Types.ObjectId(reviewId),
             },
             {
               "reactionItem.user_id": new mongoose.Types.ObjectId(
                 userState.userId
-              ), // Match specific reaction inside reactions array
+              ),
             },
           ],
           returnDocument: "after",
@@ -748,8 +723,8 @@ app.post("/game/:id/review/reaction/update", async (req, res) => {
       };
       reactionResponse = await Game.findOneAndUpdate(
         {
-          id: id, // Ensure you're matching the correct game
-          "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId), // Match the review's ID
+          id: id,
+          "played_by.review.review_id": new mongoose.Types.ObjectId(reviewId),
         },
         reactionUpdate,
         {
@@ -758,7 +733,7 @@ app.post("/game/:id/review/reaction/update", async (req, res) => {
               "played.review.review_id": new mongoose.Types.ObjectId(reviewId),
             },
           ],
-          returnDocument: "after", // To return the updated document
+          returnDocument: "after",
         }
       );
     }
@@ -799,28 +774,28 @@ app.post("/game/:id/comment/reaction/update", async (req, res) => {
         $set: {
           "comments.$[comment].likes": newLikes,
           "comments.$[comment].dislikes": newDislikes,
-          "comments.$[comment].reactions.$[reactionItem].reaction": reaction, // Target specific reaction
+          "comments.$[comment].reactions.$[reactionItem].reaction": reaction,
         },
       };
 
       reactionResponse = await Game.findOneAndUpdate(
         {
-          id: id, // Match game ID
-          "comments.comment_id": new mongoose.Types.ObjectId(commentId), // Match review ID
+          id: id,
+          "comments.comment_id": new mongoose.Types.ObjectId(commentId),
           "comments.reactions.user_id": new mongoose.Types.ObjectId(
             userState.userId
-          ), // Match reaction's user ID
+          ),
         },
         reactionUpdate,
         {
           arrayFilters: [
             {
-              "comment.comment_id": new mongoose.Types.ObjectId(commentId), // Match review inside played_by
+              "comment.comment_id": new mongoose.Types.ObjectId(commentId),
             },
             {
               "reactionItem.user_id": new mongoose.Types.ObjectId(
                 userState.userId
-              ), // Match specific reaction inside reactions array
+              ),
             },
           ],
           returnDocument: "after",
@@ -842,8 +817,8 @@ app.post("/game/:id/comment/reaction/update", async (req, res) => {
 
       reactionResponse = await Game.findOneAndUpdate(
         {
-          id: id, // Ensure you're matching the correct game
-          "comments.comment_id": new mongoose.Types.ObjectId(commentId), // Match the review's ID
+          id: id,
+          "comments.comment_id": new mongoose.Types.ObjectId(commentId),
         },
         reactionUpdate,
         {
@@ -852,7 +827,7 @@ app.post("/game/:id/comment/reaction/update", async (req, res) => {
               "comment.comment_id": new mongoose.Types.ObjectId(commentId),
             },
           ],
-          returnDocument: "after", // To return the updated document
+          returnDocument: "after",
         }
       );
     }
@@ -874,36 +849,26 @@ app.get("/game/:id/record/reaction/get", async (req, res) => {
       id: id,
       "played_by.review.reactions.user_id": new mongoose.Types.ObjectId(userId),
     }).select("played_by.review");
-    // console.log(reactionResponse);
     const reviews = reactionResponse.flatMap((game) =>
       game.played_by.flatMap((p) => p.review)
     );
-    // console.log(reviews);
     let reviewsReacted = {};
     if (reactionResponse) {
       reviews.forEach((review) => {
         if (review != undefined) {
           reactions = review.reactions;
-          // console.log(review);
-          // console.log(reactions);
           if (reactions) {
             reactions.forEach((reaction) => {
               if (
                 reaction.user_id.equals(new mongoose.Types.ObjectId(userId))
               ) {
-                // reviewsReacted.push({
-                //   review_id: reviewData.review_id,
-                //   reaction: reaction.reaction,
-                // });
                 reviewsReacted[review.review_id] = reaction.reaction;
-                // console.log(reviewsReacted);
               }
             });
           }
         }
       });
     }
-    // console.log(reviewsReacted);
     res.status(200).json({
       message: "Reaction Get Success",
       reviews: reviewsReacted,
@@ -922,31 +887,18 @@ app.get("/game/:id/comment/reaction/get", async (req, res) => {
       id: id,
       "comments.reactions.user_id": new mongoose.Types.ObjectId(userId),
     }).select("comments");
-    // console.log(reactionResponse[0].comments);
-    // console.log(reactionResponse);
-
-    // console.log(reviews);
     let commentsReacted = {};
     if (reactionResponse) {
       reactionResponse[0]?.comments.forEach((comment) => {
         if (comment != undefined) {
           reactions = comment.reactions;
-          console.log(comment);
-          console.log(22222222222);
-          // console.log(comment[0]);
-          console.log(reactions);
           if (reactions) {
             reactions.forEach((reaction) => {
               console.log(reaction);
               if (
                 reaction.user_id.equals(new mongoose.Types.ObjectId(userId))
               ) {
-                // reviewsReacted.push({
-                //   review_id: reviewData.review_id,
-                //   reaction: reaction.reaction,
-                // });
                 commentsReacted[comment.comment_id] = reaction.reaction;
-                // console.log(reviewsReacted);
               }
             });
           }
@@ -968,13 +920,11 @@ app.get("/game/:id/comment/reaction/get", async (req, res) => {
 app.get("/game/:id/record/check", async (req, res) => {
   const id = req.params.id;
   const { userId } = req.query;
-  // console.log(id, userId);
   try {
     const loggedResponse = await Game.find({
       id: id,
       "played_by.user_id": new mongoose.Types.ObjectId(userId),
     });
-    // console.log(loggedResponse);
     if (loggedResponse.length === 0) {
       res.status(200).json({
         message: "Log check Success",
@@ -1009,8 +959,6 @@ app.get("/game/:id/record/get", async (req, res) => {
         },
       }
     );
-    console.log(logResponse);
-    // console.log(logResponse[0].played_by);
 
     res.status(200).json({
       message: "Log Get Success",
@@ -1025,7 +973,6 @@ app.get("/game/:id/record/get", async (req, res) => {
 app.get("/game/:id/comment/check", async (req, res) => {
   const id = req.params.id;
   const { userId } = req.query;
-  // console.log(id, userId);
   try {
     const loggedResponse = await Game.find({
       id: id,
@@ -1067,7 +1014,6 @@ app.get("/game/:id/comment/get", async (req, res) => {
       }
     );
     console.log(`Retrieved Comment: ${logResponse}`);
-    // console.log(logResponse[0].played_by);
 
     res.status(200).json({
       message: "Comment Get Success",
@@ -1189,10 +1135,6 @@ app.get("/get/:userType/:username", async (req, res) => {
           path: "dev_comments.game_id",
           select: "genres themes keywords name platforms cover",
         },
-        //   { path: "favourite_games.first", select: "name cover" },
-        //   { path: "favourite_games.second", select: "name cover" },
-        //   { path: "favourite_games.third", select: "name cover" },
-        //   // { path: "games_played.review" },
       ]);
     } else {
       userResponse = await schema
@@ -1207,7 +1149,6 @@ app.get("/get/:userType/:username", async (req, res) => {
           { path: "favourite_games.first", select: "name cover id" },
           { path: "favourite_games.second", select: "name cover id" },
           { path: "favourite_games.third", select: "name cover id" },
-          // { path: "games_played.review" },
         ]);
     }
     console.log(userResponse);
@@ -1232,8 +1173,6 @@ app.get("/get/:userType/:username/recommendations", async (req, res) => {
   }
   try {
     let recommendations = await getGameRecommendations(username, schema);
-    // console.log("Recommended Games:", recommendations);
-    console.log("Bazinga");
     res.status(200).json({
       message: "Get User Success",
       recommendations: recommendations,
@@ -1263,7 +1202,6 @@ app.post(
     }
     const oldFavourites = userState.favouriteGames;
     const newFavourites = {};
-    // console.log(position);
     if (
       new mongoose.Types.ObjectId(oldFavourites?.first?._id).equals(
         new mongoose.Types.ObjectId(game)
@@ -1334,7 +1272,6 @@ app.post(
       newFavourites.third = new mongoose.Types.ObjectId(game);
     }
     try {
-      // console.log(newFavourites);
       const favouriteUpdate = await schema
         .findOneAndUpdate(
           { username: username },
@@ -1347,7 +1284,6 @@ app.post(
           { path: "favourite_games.second", select: "name cover" },
           { path: "favourite_games.third", select: "name cover" },
         ]);
-      // console.log(favouriteUpdate);
       res.status(200).json({
         message: "Successfully updated favourite games",
         favourites: favouriteUpdate.favourite_games,
@@ -1442,7 +1378,7 @@ async function registerAccount(
   username,
   password,
   res,
-  email = null,
+  email = "",
   request = null
 ) {
   if (type != "Users" && type != "Admin" && type != "Developer") {
@@ -1452,9 +1388,13 @@ async function registerAccount(
     const userResponse = await User.findOne({ username: username });
     const adminResponse = await Admin.findOne({ username: username });
     const developerResponse = await Developer.findOne({ username: username });
+    const emailResponse = await Developer.findOne({ email: email });
     console.log(!userResponse && !adminResponse && !developerResponse);
     console.log(userResponse, adminResponse, developerResponse);
     if (!userResponse && !adminResponse && !developerResponse) {
+      if (emailResponse) {
+        return res.status(400).json({ message: "Email Already in Use" });
+      }
       const passwordHash = getHash(password);
       let registerResponse = {};
       if (type === "Developer") {
@@ -1495,6 +1435,7 @@ async function registerAccount(
           password: passwordHash,
           games_played: [],
           image: "",
+          favourite_games: { first: null, second: null, third: null },
         });
       }
       console.log(registerResponse);
@@ -1513,7 +1454,7 @@ async function registerAccount(
   }
 }
 
-async function loginAccount(type, username, password, res) {
+async function loginAccount(type, username, password, res, email = "") {
   console.log(type);
   let schema = User;
   if (type === "Admin") {
@@ -1526,7 +1467,7 @@ async function loginAccount(type, username, password, res) {
     let response = {};
     if (type === "Developer") {
       response = await schema.findOne({
-        // email: email,
+        email: email,
         username: username,
         password: passwordHash,
         verified: true,
@@ -1583,16 +1524,6 @@ function parseImageId(coverId) {
   } catch (error) {
     return "";
   }
-}
-
-async function getCredentials() {
-  const credentialResponse = await axios
-    .get(azureAPI + "credentials/get")
-    .catch((error) => {
-      console.error("Error during credentials request:", error);
-    });
-  // console.log(`Credential Data: ${credentialResponse.data.ACCESS}`);
-  return credentialResponse.data.ACCESS;
 }
 
 function getGenres(genres) {
@@ -1739,42 +1670,31 @@ async function getGameRecommendations(username, schema) {
     } catch (error) {
       console.log("3rd Favourite not specified");
     }
-    user.games_played.forEach((game) =>
-      userGames.add(game.game_id._id.toString())
-    );
-    console.log(user.games_played);
-
-    console.log(userGames);
-    let userGenres = new Set();
-    let userThemes = new Set();
-    let userKeywords = new Set();
-    let relevantGenres = new Set();
-    let relevantThemes = new Set();
-    let relevantKeywords = new Set();
-    let gameArray = Array.from(userGames);
-    let userThemeVector = new Array(themeVector.length).fill(0);
-    let userGenreVector = new Array(genreVector.length).fill(0);
-
     let keywordVector = new Set();
     user.games_played.forEach((game) => {
+      userGames.add(game.game_id._id.toString());
       const keywordList = game.game_id.keywords || [];
       keywordList.forEach((keyword) => {
         keywordVector.add(keyword.name);
       });
     });
+    let userGenres = new Set();
+    let userThemes = new Set();
+    let userKeywords = new Set();
+    let userThemeVector = new Array(themeVector.length).fill(0);
+    let userGenreVector = new Array(genreVector.length).fill(0);
+
     keywordVector = Array.from(keywordVector);
     let userKeywordVector = new Array(keywordVector.length).fill(0);
     for (let gameData of user.games_played) {
-      console.log(gameData);
       if (gameData) {
-        console.log("indeed");
         let favouriteBias = 1;
         if (
-          user.favouriteGames?.first?._id.toString() ==
+          user.favourite_games?.first?._id.toString() ==
             gameData.game_id._id.toString() ||
-          user.favouriteGames?.third?._id.toString() ==
+          user.favourite_games?.third?._id.toString() ==
             gameData.game_id._id.toString() ||
-          user.favouriteGames?.second?._id.toString() ==
+          user.favourite_games?.second?._id.toString() ==
             gameData.game_id._id.toString()
         ) {
           favouriteBias = 5;
@@ -1782,10 +1702,8 @@ async function getGameRecommendations(username, schema) {
         const rating = gameData.rating || 0;
         const playCount = gameData.times_played || 1;
         const hoursPlayed = gameData.hours_played || 1;
-        console.log(rating, playCount, hoursPlayed, favouriteBias);
         gameData.game_id?.genres.forEach((genre) => {
           const genreIndex = genreVector.indexOf(genre.name);
-          console.log(genreIndex);
           if (genreIndex !== -1) {
             userGenreVector[genreIndex] +=
               (rating / 5) *
@@ -1818,27 +1736,40 @@ async function getGameRecommendations(username, schema) {
         });
 
         gameData.game_id?.genres.forEach((genre) => {
-          relevantGenres.add(genre);
           userGenres.add(genre.name);
         });
         gameData.game_id?.themes.forEach((theme) => {
-          relevantThemes.add(theme);
           userThemes.add(theme.name);
         });
         gameData.game_id?.keywords.forEach((keyword) => {
-          relevantKeywords.add(keyword);
           userKeywords.add(keyword.name);
         });
       }
     }
+    console.log("Find Started");
     let relevantGames = await Game.aggregate([
       {
         $match: {
           $or: [
-            { genres: { $in: Array.from(relevantGenres) } },
-            { themes: { $in: Array.from(relevantThemes) } },
-            { keywords: { $in: Array.from(relevantKeywords) } },
+            { "genres.name": { $in: Array.from(userGenres) } },
+            { "themes.name": { $in: Array.from(userThemes) } },
+            { "keywords.name": { $in: Array.from(userKeywords) } },
           ],
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          genres: 1,
+          themes: 1,
+          keywords: 1,
+          cover: 1,
+          id: 1,
+          average_rating: 1,
+          average_times_played: 1,
+          average_hours_played: 1,
+          records_made: 1,
         },
       },
     ]);

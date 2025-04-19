@@ -13,13 +13,8 @@
       <div v-for="profile in filteredUsers" :key="game">
         <button class="search-result" @click="goToProfile(profile.username)">
           <div class="horizontal-container">
-            <ProfilePicture :image="profile.image" />
+            <ProfilePicture :small="true" :image="profile.image" />
             <p>{{ profile.username }}</p>
-            <!-- <img
-              :src="`https://images.igdb.com/igdb/image/upload/t_micro/${game.imageId}.jpg`"
-              alt="Game Cover"
-              class="game-image"
-            /> -->
           </div>
         </button>
       </div>
@@ -38,11 +33,12 @@ const searchIsFocused = ref(false)
 const userList = ref([])
 const filteredUsers = ref([])
 const adminList = ref([])
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 async function filteredSearch() {
   try {
     const response = await axios
-      .get('http://localhost:5000/search/users', {
+      .get(`${backendUrl}/search/users`, {
         params: { query: input.value },
       })
       .catch((error) => {
@@ -96,7 +92,9 @@ function goToProfile(username) {
 
 <style scoped>
 .horizontal-container {
+  display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .search-container {
@@ -114,7 +112,7 @@ function goToProfile(username) {
   top: 100%;
   left: 0;
   right: 0;
-  z-index: 10;
+  z-index: 100;
   background-color: white;
   border: 1px solid #ccc;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);

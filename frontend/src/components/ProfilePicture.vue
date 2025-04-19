@@ -16,7 +16,7 @@
     <img
       v-if="image !== undefined && image !== '' && image !== null"
       class="profilePicture"
-      :src="`${imageUrl}${userState.profilePicture}`"
+      :src="`${imageUrl}${image}`"
     />
     <img v-else class="profilePicture" src="../assets/profile_icon.png" />
   </div>
@@ -25,7 +25,7 @@
       v-if="image !== undefined && image !== '' && image !== null"
       class="profilePicture"
       style="width: 100px; height: 100px"
-      :src="`${imageUrl}${userState.profilePicture}`"
+      :src="`${imageUrl}${image}`"
     />
     <img
       v-else

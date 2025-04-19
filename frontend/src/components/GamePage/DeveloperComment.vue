@@ -3,7 +3,7 @@
     <div class="horizontal-container">
       <h4>
         <!-- <p>{{ userData }}</p> -->
-        <a :href="`http://localhost:5173/profile/Developer/${commentInfo?.dev_id.username}`">{{
+        <a :href="`${frontendUrl}/profile/Developer/${commentInfo?.dev_id.username}`">{{
           commentInfo?.dev_id.username
         }}</a>
       </h4>
@@ -75,6 +75,8 @@ const reactionUpdated = ref(false)
 const route = useRoute()
 const gameId = route.params.id
 const isDisabled = ref(false)
+const backendUrl = import.meta.env.VITE_BACKEND_URL
+const frontendUrl = import.meta.env.VITE_FRONTEND_URL
 const handleButton = () => {
   isDisabled.value = true // Disable button
   setTimeout(() => {
@@ -128,7 +130,8 @@ async function updateReaction(newReaction, newLikes, newDislikes) {
     console.log(newReaction)
     console.log(props.commentInfo.comment_id)
     const response = await axios.post(
-      `http://localhost:5000/game/${gameId}/comment/reaction/update`,
+      `
+      ${backendUrl}/game/${gameId}/comment/reaction/update`,
       {
         reaction: newReaction,
         newLikes,
